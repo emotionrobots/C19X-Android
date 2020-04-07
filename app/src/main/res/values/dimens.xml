@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="textExtraLarge">40sp</dimen>
+    <dimen name="textLarge">30sp</dimen>
+    <dimen name="textMedium">20sp</dimen>
+    <dimen name="textSmall">12sp</dimen>
+    <dimen name="marginExtraLarge">40dp</dimen>
+    <dimen name="marginLarge">20dp</dimen>
+    <dimen name="marginMedium">10dp</dimen>
+    <dimen name="marginSmall">5dp</dimen>
+    <dimen name="marginTiny">2dp</dimen>
+    <dimen name="dividerSize">2dp</dimen>
+    <dimen name="dividerMargin">10dp</dimen>
+</resources>

@@ -1,18 +1,280 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".gui.MainActivity">
+    tools:context="org.c19x.gui.MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginLeft="@dimen/marginMedium"
+        android:layout_marginRight="@dimen/marginMedium">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- YOUR STATUS -->
+        <TextView
+            android:id="@+id/healthTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/marginSmall"
+            android:text="@string/healthTitle"
+            android:textSize="@dimen/textLarge"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <RadioGroup
+            android:id="@+id/healthOptions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/healthTitle">
+
+            <RadioButton
+                android:id="@+id/healthOptionNoSymptom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorGreen"
+                android:buttonTint="@color/colorWhite"
+                android:checked="true"
+                android:onClick="setHealthStatus"
+                android:padding="@dimen/marginMedium"
+                android:text="@string/healthOptionNoSymptom"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textMedium" />
+
+            <RadioButton
+                android:id="@+id/healthOptionHasSymptom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorAmber"
+                android:buttonTint="@color/colorWhite"
+                android:onClick="setHealthStatus"
+                android:padding="@dimen/marginMedium"
+                android:text="@string/healthOptionHasSymptom"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textMedium" />
+
+            <RadioButton
+                android:id="@+id/healthOptionConfirmedDiagnosis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorRed"
+                android:buttonTint="@color/colorWhite"
+                android:onClick="setHealthStatus"
+                android:padding="@dimen/marginMedium"
+                android:text="@string/healthOptionConfirmedDiagnosis"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textMedium" />
+        </RadioGroup>
+
+        <!-- YOUR CONTACTS' STATUS -->
+        <View
+            android:id="@+id/healthDivider"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dividerSize"
+            android:layout_margin="@dimen/dividerMargin"
+            android:background="@color/colorGrey"
+            app:layout_constraintTop_toBottomOf="@id/healthOptions" />
+
+        <TextView
+            android:id="@+id/contactTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/marginSmall"
+            android:text="@string/contactTitle"
+            android:textSize="@dimen/textLarge"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/healthDivider" />
+
+        <TextView
+            android:id="@+id/contactOption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorGreen"
+            android:gravity="center"
+            android:padding="@dimen/marginMedium"
+            android:text="@string/contactOptionNoReport"
+            android:textAllCaps="true"
+            android:textColor="@color/colorWhite"
+            android:textSize="@dimen/textMedium"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/contactTitle" />
+
+        <TextView
+            android:id="@+id/contactOptionDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/marginMedium"
+            android:text="@string/contactOptionNoReportDescription"
+            android:textSize="@dimen/textMedium"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/contactOption" />
+
+        <View
+            android:id="@+id/contactDivider"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dividerSize"
+            android:layout_margin="@dimen/dividerMargin"
+            android:background="@color/colorGrey"
+            app:layout_constraintTop_toBottomOf="@id/contactOptionDescription" />
+
+        <TextView
+            android:id="@+id/adviceTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/marginSmall"
+            android:text="@string/adviceTitle"
+            android:textSize="@dimen/textLarge"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/contactDivider" />
+
+        <TextView
+            android:id="@+id/adviceOption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorAmber"
+            android:gravity="center"
+            android:padding="@dimen/marginMedium"
+            android:text="@string/adviceOptionStayAtHome"
+            android:textAllCaps="true"
+            android:textColor="@color/colorWhite"
+            android:textSize="@dimen/textMedium"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/adviceTitle" />
+
+        <TextView
+            android:id="@+id/adviceOptionDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/marginMedium"
+            android:text="@string/adviceOptionStayAtHomeDescription"
+            android:textSize="@dimen/textMedium"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/adviceOption" />
+
+        <View
+            android:id="@+id/adviceDivider"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dividerSize"
+            android:layout_margin="@dimen/dividerMargin"
+            android:background="@color/colorGrey"
+            app:layout_constraintTop_toBottomOf="@id/adviceOptionDescription" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:layout_marginTop="@dimen/marginMedium"
+            app:layout_constraintTop_toBottomOf="@id/adviceDivider">
+
+            <LinearLayout
+                android:layout_height="fill_parent"
+                android:layout_weight="1"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="@dimen/marginTiny"
+                    android:text="@string/statusProtectionTitle"
+                    android:textColor="@color/colorWhite"
+                    android:background="@color/colorDarkGrey"
+                    android:textSize="@dimen/textSmall" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="@dimen/marginTiny"
+                    android:layout_marginLeft="@dimen/marginTiny"
+                    android:layout_marginRight="@dimen/marginTiny"
+                    android:text="@string/appVersionTitle"
+                    android:textColor="@color/colorWhite"
+                    android:background="@color/colorDarkGrey"
+                    android:textSize="@dimen/textSmall" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="@dimen/marginTiny"
+                    android:text="@string/dataVersionTitle"
+                    android:textColor="@color/colorWhite"
+                    android:background="@color/colorDarkGrey"
+                    android:textSize="@dimen/textSmall" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_height="fill_parent"
+                android:layout_weight="1"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:layout_marginTop="@dimen/marginTiny"
+                android:layout_marginBottom="@dimen/marginLarge"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/protectionStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/statusProtectionOptionStarting"
+                    android:padding="@dimen/marginTiny"
+                    android:background="@color/colorAmber"
+                    android:textColor="@color/colorWhite"
+                    android:textSize="@dimen/textSmall" />
+
+                <TextView
+                    android:id="@+id/appVersion"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:layout_marginLeft="@dimen/marginTiny"
+                    android:layout_marginRight="@dimen/marginTiny"
+                    android:text="@string/appVersion"
+                    android:padding="@dimen/marginTiny"
+                    android:background="@color/colorGreen"
+                    android:textColor="@color/colorWhite"
+                    android:textSize="@dimen/textSmall" />
+
+                <TextView
+                    android:id="@+id/dataVersion"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/dataVersionDownloading"
+                    android:padding="@dimen/marginTiny"
+                    android:background="@color/colorAmber"
+                    android:textColor="@color/colorWhite"
+                    android:textSize="@dimen/textSmall" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

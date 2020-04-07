@@ -1,3 +1,41 @@
 <resources>
     <string name="app_name">C19X</string>
+
+    <string name="healthTitle">How are you today?</string>
+    <string name="healthOptionNoSymptom">I do not have a high temperature or a new continuous cough</string>
+    <string name="healthOptionHasSymptom">I have a high temperature and/or a new continuous cough</string>
+    <string name="healthOptionConfirmedDiagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19) by the NHS</string>
+
+    <string name="contactTitle">Your recent contacts</string>
+    <string name="contactOptionNoReport">Nothing reported</string>
+    <string name="contactOptionNoReportDescription">No one has reported any COVID-19 infection risk, symptoms or diagnosis.</string>
+    <string name="contactOptionInfectious">Infection risk</string>
+    <string name="contactOptionInfectiousDescription">People have reported potential COVID-19 infection, symptoms or confirmed diagnosis.</string>
+
+    <string name="adviceTitle">What you need to do</string>
+    <string name="adviceOptionNoRestriction">No restriction</string>
+    <string name="adviceOptionNoRestrictionDescription">COVID-19 is now under control, you can safely return to your normal activities.</string>
+    <string name="adviceOptionStayAtHome">Stay at home</string>
+    <string name="adviceOptionStayAtHomeDescription">Everyone must stay at home to help stop the spread of COVID-19.</string>
+    <string name="adviceOptionSelfIsolation">Self-isolation</string>
+    <string name="adviceOptionSelfIsolationDescription">Do not leave your home if you have symptoms of COVID-19 or been in prolonged close contact with someone who does.</string>
+
+    <string name="statusProtectionTitle">Protection</string>
+    <string name="statusProtectionOptionStarting">Starting...</string>
+    <string name="statusProtectionOptionNone">None</string>
+    <string name="statusProtectionOptionSelfOnly">Self only</string>
+    <string name="statusProtectionOptionOthersOnly">Others only</string>
+    <string name="statusProtectionOptionCommunity">Self and others</string>
+
+    <string name="appVersionTitle">App version</string>
+    <string name="appVersion">20200403A</string>
+
+    <string name="dataVersionTitle">Data version</string>
+    <string name="dataVersionDownloading">Downloading...</string>
+
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="dialogBluetoothUnsupported">Bluetooth is unsupported on this device. This app needs Bluetooth to find other app users near you.</string>
+    <string name="dialogLocationPermissionRationale">Location data is required to estimate your proximity to other app users. This app does not use GPS tracking and your location is never recorded or shared.</string>
 </resources>
