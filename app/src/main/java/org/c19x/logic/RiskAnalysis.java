@@ -47,7 +47,7 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         final byte advice = getAdvice(globalStatusLog, riskFactors);
         final byte contact = getContact(globalStatusLog, riskFactors);
 
-        Logger.info(tag, "Risk analysis (contact={},advice={},riskFactors={})", HealthStatus.toString(contact), HealthStatus.toString(advice), riskFactors);
+        Logger.info(tag, "Risk analysis (contact={}({}),advice={}({}),riskFactors={})", HealthStatus.toString(contact), contact, HealthStatus.toString(advice), advice, riskFactors);
 
         broadcast(l -> l.update(contact, advice));
     }

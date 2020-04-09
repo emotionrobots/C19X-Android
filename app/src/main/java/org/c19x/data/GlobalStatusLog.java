@@ -51,6 +51,17 @@ public class GlobalStatusLog {
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
+    /**
+     * Create a new global status log based on a copy of the given log.
+     *
+     * @param globalStatusLog
+     */
+    public GlobalStatusLog(final GlobalStatusLog globalStatusLog) {
+        byteBuffer = ByteBuffer.allocate(globalStatusLog.byteBuffer.capacity());
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        System.arraycopy(globalStatusLog.byteBuffer.array(), 0, byteBuffer.array(), 0, byteBuffer.capacity());
+    }
+
     // 0..16 Digest (16-byte hash)
     // ================================================================
     /**

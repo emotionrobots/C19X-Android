@@ -69,9 +69,9 @@ public class C19XApplication extends Application {
         context = getApplicationContext();
         storage = getStorage();
 
-//        bluetoothStateMonitor = getBluetoothStateMonitor();
-//        this.riskAnalysis = getRiskAnalysis();
-//        startGlobalStatusLogAutomaticUpdate();
+        bluetoothStateMonitor = getBluetoothStateMonitor();
+        this.riskAnalysis = getRiskAnalysis();
+        startGlobalStatusLogAutomaticUpdate();
     }
 
     @Override

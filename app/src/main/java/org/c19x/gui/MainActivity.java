@@ -325,8 +325,8 @@ public class MainActivity extends Activity {
             final byte targetHealthStatus = viewHealthStatus;
             if (targetHealthStatus != currentHealthStatus) {
                 Logger.debug(tag, "Self-report status update (current={},target={})", HealthStatus.toString(currentHealthStatus), HealthStatus.toString(targetHealthStatus));
-                C19XApplication.getNetworkClient().postStatus(id, targetHealthStatus, success -> {
-                    if (success) {
+                C19XApplication.getNetworkClient().postHealthStatus(id, C19XApplication.getDeviceRegistration().getSharedSecretKey(), targetHealthStatus, r -> {
+                    if (r.getValue()) {
                         C19XApplication.getHealthStatus().setStatus(targetHealthStatus);
                         Logger.debug(tag, "Self-report status update successful (current={},previous={})", C19XApplication.getHealthStatus(), HealthStatus.toString(currentHealthStatus));
                     } else {

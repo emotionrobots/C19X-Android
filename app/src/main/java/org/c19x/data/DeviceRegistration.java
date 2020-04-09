@@ -66,13 +66,13 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
             final KeyExchange keyExchange = new KeyExchange();
             Logger.info(tag, "Connecting to server");
             final NetworkClient networkClient = C19XApplication.getNetworkClient();
-            networkClient.postKeyExchangePublicKeyToBob(keyExchange.getAlicePublicKey(), keyExchangeResponse -> {
+            networkClient.postPublicKeyToBob(keyExchange.getAlicePublicKey(), keyExchangeResponse -> {
                 if (keyExchangeResponse.getNetworkResponse() == NetworkResponse.OK) {
                     Logger.debug(tag, "Key exchange successful (identifier={})", keyExchangeResponse.getIdentifier());
                     try {
                         keyExchange.acceptBobPublicKey(keyExchangeResponse.getBobPublicKeyEncoded());
                         Logger.debug(tag, "Key agreement successful (identifier={})", keyExchangeResponse.getIdentifier());
-                        networkClient.getConfirmationOfSharedSecretKeyFromBob(keyExchangeResponse.getIdentifier(), keyExchange.getSharedSecretKey(), confirmationResponse -> {
+                        networkClient.confirmKeyAgreementWithBob(keyExchangeResponse.getIdentifier(), keyExchange.getSharedSecretKey(), confirmationResponse -> {
                             if (confirmationResponse.getNetworkResponse() == NetworkResponse.OK) {
                                 identifier = keyExchangeResponse.getIdentifier();
                                 sharedSecret = keyExchange.getSharedSecret();
