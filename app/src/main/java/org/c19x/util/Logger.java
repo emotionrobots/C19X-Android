@@ -2,12 +2,17 @@ package org.c19x.util;
 
 import android.util.Log;
 
+import java.io.PrintStream;
+
 public class Logger {
     private final static short DEBUG = 0;
     private final static short INFO = 1;
     private final static short WARN = 2;
     private final static short ERROR = 3;
     private static short level = DEBUG;
+
+    private static PrintStream stream = System.out;
+
 
     public final static void debug(final String tag, final String message, final Object... values) {
         if (level <= DEBUG) {
@@ -34,6 +39,43 @@ public class Logger {
     }
 
     private final static void output(final int level, final String tag, final String message, final Object... values) {
+        if (stream != null) {
+            outputStream(level, tag, message, values);
+        } else {
+            outputLog(level, tag, message, values);
+        }
+    }
+
+    private final static void outputStream(final int level, final String tag, final String message, final Object... values) {
+        final Throwable throwable = getThrowable(values);
+        String label = "DEBUG";
+        switch (level) {
+            case DEBUG: {
+                label = "DEBUG";
+                break;
+            }
+            case INFO: {
+                label = "INFO";
+                break;
+            }
+            case WARN: {
+                label = "WARN";
+                break;
+            }
+            case ERROR: {
+                label = "ERROR";
+                break;
+            }
+        }
+        if (throwable == null) {
+            stream.println(label + " [" + tag + "] : " + render(message, values));
+        } else {
+            stream.println(label + " [" + tag + "] : " + render(message, values));
+            throwable.printStackTrace(stream);
+        }
+    }
+
+    private final static void outputLog(final int level, final String tag, final String message, final Object... values) {
         final Throwable throwable = getThrowable(values);
         switch (level) {
             case DEBUG: {

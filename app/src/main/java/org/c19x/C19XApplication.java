@@ -11,12 +11,14 @@ import org.c19x.beacon.BeaconTransmitter;
 import org.c19x.beacon.ble.BLEReceiver;
 import org.c19x.beacon.ble.BLETransmitter;
 import org.c19x.data.DetectionEventLog;
+import org.c19x.data.DeviceRegistration;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.data.HealthStatus;
 import org.c19x.logic.RiskAnalysis;
 import org.c19x.network.NetworkClient;
 import org.c19x.util.Logger;
+import org.c19x.util.Storage;
 import org.c19x.util.bluetooth.BluetoothStateMonitor;
 
 import java.math.BigInteger;
@@ -24,7 +26,6 @@ import java.security.MessageDigest;
 import java.util.Calendar;
 import java.util.Random;
 import java.util.TimeZone;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class C19XApplication extends Application {
     private final static String tag = C19XApplication.class.getName();
@@ -46,8 +47,12 @@ public class C19XApplication extends Application {
 
     private static Application application;
     private static Context context;
+    private static Storage storage;
+
+    private static DeviceRegistration deviceRegistration;
+
+
     private static HealthStatus healthStatus;
-    private static AtomicLong deviceId;
     private static BluetoothStateMonitor bluetoothStateMonitor;
     private static BeaconTransmitter beaconTransmitter;
     private static BeaconReceiver beaconReceiver;
@@ -62,9 +67,11 @@ public class C19XApplication extends Application {
         super.onCreate();
         application = this;
         context = getApplicationContext();
-        bluetoothStateMonitor = getBluetoothStateMonitor();
-        this.riskAnalysis = getRiskAnalysis();
-        startGlobalStatusLogAutomaticUpdate();
+        storage = getStorage();
+
+//        bluetoothStateMonitor = getBluetoothStateMonitor();
+//        this.riskAnalysis = getRiskAnalysis();
+//        startGlobalStatusLogAutomaticUpdate();
     }
 
     @Override
@@ -87,6 +94,18 @@ public class C19XApplication extends Application {
     }
 
     /**
+     * Get internal storage.
+     *
+     * @return
+     */
+    public final static Storage getStorage() {
+        if (storage == null) {
+            storage = new Storage();
+        }
+        return storage;
+    }
+
+    /**
      * Get singleton health status register.
      *
      * @return
@@ -99,15 +118,15 @@ public class C19XApplication extends Application {
     }
 
     /**
-     * Get singleton device identifier.
+     * Get device identifier.
      *
      * @return
      */
-    public final static AtomicLong getDeviceId() {
-        if (deviceId == null) {
-            deviceId = new AtomicLong(Math.round(Math.random() * Long.MAX_VALUE));
+    public final static DeviceRegistration getDeviceRegistration() {
+        if (deviceRegistration == null) {
+            deviceRegistration = new DeviceRegistration();
         }
-        return deviceId;
+        return deviceRegistration;
     }
 
     /**

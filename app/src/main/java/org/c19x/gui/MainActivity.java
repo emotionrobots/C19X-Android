@@ -13,12 +13,15 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.RadioButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
 import org.c19x.beacon.BeaconListener;
+import org.c19x.data.DeviceRegistration;
+import org.c19x.data.DeviceRegistrationListener;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogListener;
 import org.c19x.data.HealthStatus;
@@ -86,6 +89,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         setDefaultState();
 
+        // Start registration
+        startDeviceRegistration();
+
         // Start monitoring
         startBeacon();
 
@@ -114,9 +120,34 @@ public class MainActivity extends Activity {
         Logger.info(tag, "Stopped main activity");
     }
 
+    // REGISTRATION ================================================================================
+    private final void startDeviceRegistration() {
+        final Activity thisActivity = this;
+        final DeviceRegistrationListener deviceRegistrationListener = new DeviceRegistrationListener() {
+            @Override
+            public void registration(boolean success, long identifier) {
+                if (success) {
+                    if (C19XApplication.getBluetoothStateMonitor().isEnabled()) {
+                        bluetoothStateMonitorListener.enabled();
+                    }
+                    Toast.makeText(thisActivity, "Device registered", Toast.LENGTH_LONG);
+                }
+            }
+        };
+
+        final DeviceRegistration deviceRegistration = C19XApplication.getDeviceRegistration();
+        deviceRegistration.addListener(deviceRegistrationListener);
+        if (!deviceRegistration.isRegistered()) {
+            Logger.info(tag, "Device registration required");
+            Toast.makeText(this, "Starting anonymous registration", Toast.LENGTH_LONG);
+            new Thread(() -> deviceRegistration.register()).start();
+        } else {
+            Logger.info(tag, "Device registration not required");
+        }
+
+    }
 
     // BEACON ======================================================================================
-
     /**
      * Start beacon transmitter and receiver, and register this activity as listener
      */
@@ -171,10 +202,13 @@ public class MainActivity extends Activity {
 
         // Use bluetooth state monitor to ensure beacon is switched on/off upon bluetooth on/off by other sources (e.g. manual control on the tablet)
         this.bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
+
             @Override
             public void enabled() {
                 Logger.debug(tag, "Bluetooth is turned on, starting beacon");
-                C19XApplication.getBeaconTransmitter().start(C19XApplication.getDeviceId().get());
+                if (C19XApplication.getDeviceRegistration().isRegistered()) {
+                    C19XApplication.getBeaconTransmitter().start(C19XApplication.getDeviceRegistration().getIdentifier());
+                }
                 C19XApplication.getBeaconReceiver().start();
             }
 

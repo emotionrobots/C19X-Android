@@ -23,6 +23,16 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         public byte governmentAdvice = HealthStatus.STAY_AT_HOME;
         public long closeContactDuration = 0;
         public long closeContactWithInfectiousDuration = 0;
+
+        @Override
+        public String toString() {
+            return "RiskFactors{" +
+                    "healthStatus=" + healthStatus +
+                    ", governmentAdvice=" + governmentAdvice +
+                    ", closeContactDuration=" + closeContactDuration +
+                    ", closeContactWithInfectiousDuration=" + closeContactWithInfectiousDuration +
+                    '}';
+        }
     }
 
 
@@ -57,7 +67,7 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         for (int i = closeContacts.size(); i-- > 0; ) {
             final long id = closeContacts.keyAt(i);
             final long duration = closeContacts.valueAt(i).value;
-            final boolean infectious = globalStatusLog.getHealthStatus(id);
+            final boolean infectious = globalStatusLog.getInfectious((int) (id % C19XApplication.anonymousIdRange));
             Logger.debug(tag, "Contact (id={},duration={},infectious={})", id, duration, infectious);
             riskFactors.closeContactDuration += duration;
             if (infectious) {

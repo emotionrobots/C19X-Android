@@ -1,15 +1,15 @@
 package org.c19x.data;
 
 import org.c19x.C19XApplication;
-import org.c19x.util.Logger;
-import org.c19x.util.messaging.DefaultBroadcaster;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.MessageDigest;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -19,41 +19,24 @@ import java.util.zip.Inflater;
  * many of the entries are going to be decoys to maintain the privacy of
  * individuals.
  */
-public class GlobalStatusLog extends DefaultBroadcaster<GlobalStatusLogListener> {
-    private final static String tag = GlobalStatusLog.class.getName();
+public class GlobalStatusLog {
+    private final static int identifierRange = C19XApplication.anonymousIdRange;
+    private ByteBuffer byteBuffer;
+    private final List<GlobalStatusLogListener> listeners = new ArrayList<>();
 
-    // Byte buffer encoding scheme
+    // Encoding scheme
     // 0..16 Digest (16-byte hash)
     // 16..24 Timestamp (8-byte long)
-    // 24..32 IdentifierRange (8-byte long)
-    // 32..33 GovernmentAdvice (1-byte byte)
-    // 33..35 RetentionPeriod (2-byte short)
-    // 35..39 SignalStrengthThreshold (4-byte double)
-    // 39..43 ContactDurationThreshold (4-byte int)
-    // 43..47 ExposureDurationThreshold (4-byte int)
-    // 47..256 Reserved (209-byte data)
-    // 256..384 ServerAddress (128-byte string)
-    // 384.. HealthStatus (bit data)
-
-    // Encoding scheme offset and length constants
-    private final static int offDigest = 0, lenDigest = 16;
-    private final static int offTimestamp = 16, lenTimestamp = 8;
-    private final static int offIdentifierRange = 24, lenIdentifierRange = 8;
-    private final static int offGovernmentAdvice = 32, lenGovernmentAdvice = 1;
-    private final static int offRetentionPeriod = 33, lenRetentionPeriod = 2;
-    private final static int offSignalStrengthThreshold = 35, lenSignalStrengthThreshold = 4;
-    private final static int offContactDurationThreshold = 39, lenContactDurationThreshold = 4;
-    private final static int offExposureDurationThreshold = 43, lenExposureDurationThreshold = 4;
-    private final static int offReserved = 47, lenReserved = 209;
-    private final static int offServerAddress = 256, lenServerAddress = 128;
-    private final static int offHealthStatus = 384, lenHealthStatus = C19XApplication.anonymousIdRange / 8;
-
-    // Byte buffer for log data
-    private int byteBufferSize;
-    private ByteBuffer byteBuffer;
+    // 24..25 GovernmentAdvice (1-byte byte)
+    // 25..27 RetentionPeriod (2-byte short)
+    // 27..31 SignalStrengthThreshold (4-byte float)
+    // 31..35 ContactDurationThreshold (4-byte int)
+    // 35..39 ExposureDurationThreshold (4-byte int)
+    // 39..128 Reserved
+    // 128..256 ServerAddress (128-byte string)
+    // 256.. Infectious (bit data)
 
     // Constants
-    private final static int millisPerMinute = 60 * 1000;
     private final static byte[] bitmasks = new byte[]{Integer.valueOf("00000001", 2).byteValue(), 0,
             Integer.valueOf("00000010", 2).byteValue(), 0, Integer.valueOf("00000100", 2).byteValue(), 0,
             Integer.valueOf("00001000", 2).byteValue(), 0, Integer.valueOf("00010000", 2).byteValue(), 0,
@@ -61,471 +44,422 @@ public class GlobalStatusLog extends DefaultBroadcaster<GlobalStatusLogListener>
             Integer.valueOf("10000000", 2).byteValue(), 0};
 
     /**
-     * Create a new empty global status log
+     * Create a new empty global status log.
      */
     public GlobalStatusLog() {
-        byteBufferSize = offHealthStatus + lenHealthStatus;
-        byteBuffer = ByteBuffer.allocate(byteBufferSize);
-        final byte zero = (byte) 0;
-        for (int i = byteBufferSize; i-- > 0; ) {
-            byteBuffer.put(i, zero);
-        }
-        setDefaultParameters();
-    }
-
-    /**
-     * Set default parameters
-     */
-    private void setDefaultParameters() {
-        setTimestamp(System.currentTimeMillis());
-        // Signal strength threshold is based on the mean + standard deviation of signal
-        // strength measurements at 2 meter distance presented in the paper :
-        // Sekara, Vedran & Lehmann, Sune. (2014). The Strength of Friendship Ties in
-        // Proximity Sensor Data. PloS one. 9. e100915. 10.1371/journal.pone.0100915.
-        setSignalStrengthThreshold(-82.03 - 4.57);
-        // Bluetooth discovery inquiry scan lasts for about 12 seconds, thus a multiple
-        // of this value offers the sample period for consecutive timestamps, taking
-        // into account signal drop outs.
-        setContactDurationThreshold(5 * millisPerMinute);
-        // Government advice
-        setGovernmentAdvice(HealthStatus.STAY_AT_HOME);
-        // Incubation of COVID-19 plus 1 day
-        setRetentionPeriod((short) 15);
-        // Exposure to infected person for over 30 minutes puts you at risk (Singapore
-        // TraceTogether tracing criteria)
-        setExposureDurationThreshold(30 * millisPerMinute);
-        // Server address
-        setServerAddress(C19XApplication.defaultServer);
-    }
-
-    /**
-     * Create a global status log based on compressed data downloaded from the
-     * server.
-     *
-     * @param compressedData
-     * @throws Exception Downloaded data failed to be decoded.
-     */
-    private GlobalStatusLog(final byte[] compressedData) throws Exception {
-        byteBuffer = ByteBuffer.wrap(decompress(compressedData));
+        byteBuffer = ByteBuffer.allocate(256 + identifierRange / 8 + ((identifierRange % 8) == 0 ? 0 : 1));
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
+    // 0..16 Digest (16-byte hash)
+    // ================================================================
     /**
-     * Generate compressed update data. The verification digest is set prior to
-     * generation.
+     * Compute MD5 digest.
      *
-     * @return Compressed update data.
+     * @return 16-byte MD5 digest for data from byte 16 onwards.
+     */
+    private final static byte[] computeDigest(final byte[] data) {
+        try {
+            final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+            messageDigest.update(data, 16, data.length - 16);
+            return messageDigest.digest();
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    /**
+     * Set MD5 message digest for current log data.
+     *
+     * @return True means digest was successfully computed and set.
+     */
+    public boolean setDigest() {
+        final byte[] digest = computeDigest(byteBuffer.array());
+        if (digest != null) {
+            System.arraycopy(digest, 0, byteBuffer.array(), 0, 16);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Check data integrity by comparing the expected and actual MD5 message digest.
+     *
+     * @return True means log data has been successfully verified.
+     */
+    public boolean getDigest() {
+        final byte[] actual = computeDigest(byteBuffer.array());
+        if (actual != null) {
+            for (int i = 0; i < 16; i++) {
+                if (actual[i] != byteBuffer.array()[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // 16..24 Timestamp (8-byte long)
+    // =============================================================
+
+    /**
+     * Set log timestamp.
+     *
+     * @param n Timestamp in milliseconds from epoch
+     */
+    public void setTimestamp(long n) {
+        byteBuffer.putLong(16, n);
+    }
+
+    /**
+     * Get log timestamp.
+     *
+     * @return Timestamp in milliseconds from epoch
+     */
+    public long getTimestamp() {
+        return byteBuffer.getLong(16);
+    }
+
+    // 24..25 GovernmentAdvice (1-byte byte)
+    // ======================================================
+
+    /**
+     * Set government default advice.
+     *
+     * @param n Advice code
+     */
+    public void setGovernmentAdvice(byte n) {
+        byteBuffer.put(24, n);
+    }
+
+    /**
+     * Get government default advice.
+     *
+     * @return Advice code
+     */
+    public byte getGovernmentAdvice() {
+        return byteBuffer.get(24);
+    }
+
+    // 25..27 RetentionPeriod (2-byte short)
+    // ============================================================================================
+
+    /**
+     * Set close contact log retention period, should be 1 + disease incubation
+     * period.
+     *
+     * @param n Days
+     */
+    public void setRetentionPeriod(short n) {
+        byteBuffer.putShort(25, n);
+    }
+
+    /**
+     * Get close contact log retention period, should be 1 + disease incubation
+     * period.
+     *
+     * @return Days
+     */
+    public short getRetentionPeriod() {
+        return byteBuffer.getShort(25);
+    }
+
+    // 27..31 SignalStrengthThreshold (4-byte float)
+    // ============================================================================================
+
+    /**
+     * Set contact duration threshold for distinguishing one continuous or two
+     * distinct contacts based on time duration between beacon signals.
+     *
+     * @param n Signal strength in dBm.
+     */
+    public void setSignalStrengthThreshold(float n) {
+        byteBuffer.putFloat(27, n);
+    }
+
+    /**
+     * Get contact duration threshold for distinguishing one continuous or two
+     * distinct contacts based on time duration between beacon signals.
+     *
+     * @return Signal strength in dBm.
+     */
+    public float getSignalStrengthThreshold() {
+        return byteBuffer.getFloat(27);
+    }
+
+    // 31..35 ContactDurationThreshold (4-byte int)
+    // ============================================================================================
+
+    /**
+     * Set contact duration threshold for distinguishing one continuous or two
+     * distinct contacts based on time duration between beacon signals.
+     *
+     * @param n Duration in milliseconds.
+     */
+    public void setContactDurationThreshold(int n) {
+        byteBuffer.putInt(31, n);
+    }
+
+    /**
+     * Get contact duration threshold for distinguishing one continuous or two
+     * distinct contacts based on time duration between beacon signals.
+     *
+     * @return Duration in milliseconds.
+     */
+    public int getContactDurationThreshold() {
+        return byteBuffer.getInt(31);
+    }
+
+    // 35..39 ExposureDurationThreshold (4-byte int)
+    // ============================================================================================
+
+    /**
+     * Set exposure duration threshold for determining how much close contact time
+     * is required for disease transmission.
+     *
+     * @param n Duration in milliseconds.
+     */
+    public void setExposureDurationThreshold(int n) {
+        byteBuffer.putInt(35, n);
+    }
+
+    /**
+     * Get exposure duration threshold for determining how much close contact time
+     * is required for disease transmission.
+     *
+     * @return Duration in milliseconds.
+     */
+    public int getExposureDurationThreshold() {
+        return byteBuffer.getInt(35);
+    }
+
+    // 128..256 ServerAddress (128-byte string)
+    // ============================================================================================
+
+    /**
+     * Set server address for next update.
+     *
+     * @param address
+     */
+    public void setServerAddress(final String address) {
+        assert (address != null && address.length() < 126);
+        final byte[] bytes = address.getBytes();
+        byteBuffer.putShort(128, (short) bytes.length);
+        System.arraycopy(bytes, 0, byteBuffer.array(), 130, bytes.length);
+    }
+
+    /**
+     * Get server address.
+     *
+     * @return Server address for next update.
+     */
+    public String getServerAddress() {
+        final byte[] bytes = new byte[byteBuffer.getShort(128)];
+        System.arraycopy(byteBuffer.array(), 130, bytes, 0, bytes.length);
+        return new String(bytes);
+    }
+
+    // 256..end Infectious (1-bit boolean)
+    // ============================================================================================
+
+    /**
+     * Set infectious status of id.
+     *
+     * @param identifier
+     * @param infectious
+     */
+    public void setInfectious(final long identifier, final boolean infectious) {
+        final int id = Math.abs((int) (identifier % identifierRange));
+        final int blockIndex = 256 + (id / 8);
+        final int bitIndex = id % 8;
+        if (infectious) {
+            byteBuffer.array()[blockIndex] |= (1 << bitIndex);
+        } else {
+            byteBuffer.array()[blockIndex] &= ~(1 << bitIndex);
+        }
+    }
+
+    /**
+     * Get infectious status of id.
+     *
+     * @param identifier
+     * @return True if infectious.
+     */
+    public boolean getInfectious(final long identifier) {
+        final int id = Math.abs((int) (identifier % identifierRange));
+        final int blockIndex = 256 + (id / 8);
+        final int bitIndex = id % 8;
+        return (byteBuffer.array()[blockIndex] & bitmasks[bitIndex]) != 0;
+    }
+
+//	/**
+//	 * Set default parameters
+//	 */
+//	private void setDefaultParameters() {
+//		setTimestamp(System.currentTimeMillis());
+//		// Signal strength threshold is based on the mean + standard deviation of signal
+//		// strength measurements at 2 meter distance presented in the paper :
+//		// Sekara, Vedran & Lehmann, Sune. (2014). The Strength of Friendship Ties in
+//		// Proximity Sensor Data. PloS one. 9. e100915. 10.1371/journal.pone.0100915.
+//		setSignalStrengthThreshold(-82.03 - 4.57);
+//		// Bluetooth discovery inquiry scan lasts for about 12 seconds, thus a multiple
+//		// of this value offers the sample period for consecutive timestamps, taking
+//		// into account signal drop outs.
+//		setContactDurationThreshold(5 * millisPerMinute);
+//		// Government advice
+//		setGovernmentAdvice(HealthStatus.STAY_AT_HOME);
+//		// Incubation of COVID-19 plus 1 day
+//		setRetentionPeriod((short) 15);
+//		// Exposure to infected person for over 30 minutes puts you at risk (Singapore
+//		// TraceTogether tracing criteria)
+//		setExposureDurationThreshold(30 * millisPerMinute);
+//		// Server address
+//		setServerAddress(C19XApplication.defaultServer);
+//	}
+
+    // Log update
+    // ============================================================================================
+
+    /**
+     * Get update for current log.
+     *
+     * @return Update for used by setUpdate(), null on failure.
      */
     public byte[] getUpdate() {
         byte[] update = null;
-        try {
-            if (setVerificationDigest()) {
-                try {
-                    update = compress(byteBuffer.array());
-                } catch (Throwable e) {
-                    Logger.warn(tag, "Update generation failed (exception)", e);
-                }
-            } else {
-                Logger.warn(tag, "Update generation failed (cannot set verification digest)");
-            }
-        } finally {
+        if (setDigest()) {
+            update = compress(byteBuffer.array());
         }
         return update;
     }
 
     /**
-     * Update global status log with verified compressed update data.
+     * Set log to update after verification.
      *
-     * @param compressedData
-     * @return True if update was successful.
+     * @param update
+     * @return True if successful, false otherwise
      */
-    public boolean setUpdate(final byte[] compressedData) {
-        final long currentTimestamp = getTimestamp();
+    public boolean setUpdate(final byte[] update) {
+        assert (update != null);
         boolean success = false;
         try {
-            final GlobalStatusLog update = new GlobalStatusLog(compressedData);
-            if (update.isVerified()) {
-                try {
-                    this.byteBuffer = update.byteBuffer;
-                    success = true;
-                } finally {
+            final byte[] data = decompress(update);
+            final byte[] digest = computeDigest(data);
+            success = true;
+            for (int i = 0; i < 16; i++) {
+                if (digest[i] != data[i]) {
+                    success = false;
+                    break;
                 }
-            } else {
-                Logger.warn(tag, "Update rejected because the content cannot be verified");
+            }
+            if (success) {
+                final long previousVersion = getTimestamp();
+                byteBuffer = ByteBuffer.wrap(data);
+                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                final long currentVersion = getTimestamp();
+                success = true;
+                broadcast(l -> l.updated(previousVersion, currentVersion));
             }
         } catch (Throwable e) {
-            Logger.warn(tag, "Update rejected because the content cannot be decompressed", e);
-        }
-        if (success) {
-            final long newTimestamp = getTimestamp();
-            broadcast(l -> l.updated(currentTimestamp, newTimestamp));
         }
         return success;
     }
 
-    /**
-     * Check integrity of log data by comparing the expected and actual MD5 message
-     * digest.
-     *
-     * @return True means log data has been successfully verified.
-     */
-    private boolean isVerified() {
-        // Lock unnecessary as it is only used by setUpdate
-        try {
-            final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-            byteBuffer.position(offDigest + lenDigest);
-            messageDigest.update(byteBuffer);
-            final byte[] actual = messageDigest.digest();
-            final byte[] expected = new byte[lenDigest];
-            byteBuffer.position(offDigest);
-            byteBuffer.get(expected);
-            return Arrays.equals(expected, actual);
-        } catch (Throwable e) {
-            Logger.warn(tag, "Message integrity verification failed", e);
-            return false;
-        }
-    }
+    // Messaging
+    // ============================================================================================
 
     /**
-     * Set MD5 message digest for the current log data.
+     * Add listener.
      *
-     * @return True means digest was successfully computed and set.
+     * @param listener
+     * @return
      */
-    private boolean setVerificationDigest() {
-        // Lock unnecessary as it is only used by getUpdate
-        try {
-            final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-            byteBuffer.position(offDigest + lenDigest);
-            messageDigest.update(byteBuffer);
-            final byte[] digest = messageDigest.digest();
-            byteBuffer.position(offDigest);
-            byteBuffer.put(digest);
+    public boolean addListener(GlobalStatusLogListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
             return true;
-        } catch (Throwable e) {
-            Logger.warn(tag, "Set digest failed, defaulting to zero", e);
-            byteBuffer.position(offDigest);
-            byteBuffer.put(new byte[lenDigest]);
+        } else {
             return false;
         }
     }
 
     /**
-     * Compress byte array.
+     * Remove listener.
      *
-     * @param data
+     * @param listener
      * @return
-     * @throws IOException
      */
-    private final static byte[] compress(final byte[] data) throws IOException {
-        final Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+    public boolean removeListener(GlobalStatusLogListener listener) {
+        if (listeners.contains(listener)) {
+            listeners.remove(listener);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Broadcast action to all listeners.
+     *
+     * @param action Action on listener.
+     */
+    public void broadcast(Consumer<GlobalStatusLogListener> action) {
+        listeners.forEach(action);
+    }
+
+
+    // Byte array compression
+    // ============================================================================================
+
+    /**
+     * Compress data.
+     *
+     * @param data Source data.
+     * @return Compressed data, or null on failure.
+     */
+    public static byte[] compress(byte[] data) {
+        final Deflater deflater = new Deflater();
+        deflater.setLevel(Deflater.BEST_COMPRESSION);
         deflater.setInput(data);
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
         deflater.finish();
-        final byte[] buffer = new byte[1024];
-        while (!deflater.finished()) {
-            final int count = deflater.deflate(buffer); // returns the generated code... index
-            outputStream.write(buffer, 0, count);
-        }
-        outputStream.close();
-        final byte[] output = outputStream.toByteArray();
-        // Logger.debug(tag, "Compressed data (original={},compressed={})", data.length,
-        // output.length);
-        return output;
-    }
-
-    /**
-     * Decompress byte array.
-     *
-     * @param data
-     * @return
-     * @throws IOException
-     * @throws DataFormatException
-     */
-    private final static byte[] decompress(final byte[] data) throws IOException, DataFormatException {
-        final Inflater inflater = new Inflater();
-        inflater.setInput(data);
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
-        final byte[] buffer = new byte[1024];
-        while (!inflater.finished()) {
-            final int count = inflater.inflate(buffer);
-            outputStream.write(buffer, 0, count);
-        }
-        outputStream.close();
-        final byte[] output = outputStream.toByteArray();
-        // Logger.debug(tag, "Decompressed data (compressed={},original={})",
-        // data.length, output.length);
-        return output;
-    }
-
-    // Thread-safe getters and setters for primitives
-    // =============================================
-
-    private long getLong(final int index) {
-        long n = 0;
         try {
-            n = byteBuffer.getLong(index);
-        } finally {
-        }
-        return n;
-    }
-
-    private double getDouble(final int index) {
-        double n = 0;
-        try {
-            n = byteBuffer.getDouble(index);
-        } finally {
-        }
-        return n;
-    }
-
-    private int getInt(final int index) {
-        int n = 0;
-        try {
-            n = byteBuffer.getInt(index);
-        } finally {
-        }
-        return n;
-    }
-
-    private short getShort(final int index) {
-        short n = 0;
-        try {
-            n = byteBuffer.getShort(index);
-        } finally {
-        }
-        return n;
-    }
-
-    private byte getByte(final int index) {
-        byte n = 0;
-        try {
-            n = byteBuffer.get(index);
-        } finally {
-        }
-        return n;
-    }
-
-    public String getString(final int index) {
-        String n = null;
-        try {
-            final int length = byteBuffer.getShort(index);
-            final byte[] bytes = new byte[length];
-            byteBuffer.position(index + 2);
-            byteBuffer.get(bytes, 0, length);
-            n = new String(bytes);
-        } finally {
-        }
-        return n;
-    }
-
-    private void setLong(final int index, final long n) {
-        try {
-            byteBuffer.putLong(index, n);
-        } finally {
-        }
-    }
-
-    private void setDouble(final int index, final double n) {
-        try {
-            byteBuffer.putDouble(index, n);
-        } finally {
-        }
-    }
-
-    private void setInt(final int index, final int n) {
-        try {
-            byteBuffer.putInt(index, n);
-        } finally {
-        }
-    }
-
-    private void setShort(final int index, final short n) {
-        try {
-            byteBuffer.putShort(index, n);
-        } finally {
-        }
-    }
-
-    private void setByte(final int index, final byte n) {
-        try {
-            byteBuffer.put(index, n);
-        } finally {
-        }
-    }
-
-    public void setString(final int index, final String n) {
-        try {
-            byteBuffer.putShort(index, (short) n.length());
-            byteBuffer.position(index + 2);
-            final byte[] bytes = n.getBytes();
-            byteBuffer.put(bytes, 0, bytes.length);
-        } finally {
-        }
-    }
-
-    // Getters and setters for log information
-    // ====================================================
-
-    // Getters
-
-    /**
-     * Log timestamp (millisecond since epoch), also used as version number
-     **/
-    public long getTimestamp() {
-        return getLong(offTimestamp);
-    }
-
-    /**
-     * Device identifier range (maximum identifier value)
-     **/
-    public long getIdentifierRange() {
-        return getLong(offIdentifierRange);
-    }
-
-    /**
-     * Goverment advice for default action (byte code)
-     **/
-    public byte getGovernmentAdvice() {
-        return getByte(offGovernmentAdvice);
-    }
-
-    /**
-     * Data retention duration (days), equal to disease incubation period
-     **/
-    public short getRetentionPeriod() {
-        return getShort(offRetentionPeriod);
-    }
-
-    /**
-     * Signal strength threshold (dBm) for distinguishing close proximity and far
-     * away contact based on RSSI
-     **/
-    public double getSignalStrengthThreshold() {
-        return getDouble(offSignalStrengthThreshold);
-    }
-
-    /**
-     * Contact duration threshold (milliseconds) for distinguishing continuous and
-     * distinct contact periods
-     **/
-    public int getContactDurationThreshold() {
-        return getInt(offContactDurationThreshold);
-    }
-
-    /**
-     * Exposure duration threshold (milliseconds) for disease transmission.
-     **/
-    public int getExposureDurationThreshold() {
-        return getInt(offExposureDurationThreshold);
-    }
-
-    /**
-     * Server address for next update
-     **/
-    public String getServerAddress() {
-        return getString(offServerAddress);
-    }
-
-    // Setters
-
-    /**
-     * Log timestamp (millisecond since epoch), also used as version number
-     **/
-    public void setTimestamp(final long value) {
-        setLong(offTimestamp, value);
-    }
-
-    /**
-     * Device identifier range (maximum identifier value)
-     **/
-    public void setIdentifierRange(final long value) {
-        setLong(offIdentifierRange, value);
-    }
-
-    /**
-     * Goverment advice for default action (byte code)
-     **/
-    public void setGovernmentAdvice(final byte value) {
-        setByte(offGovernmentAdvice, value);
-    }
-
-    /**
-     * Data retention duration (days), equal to disease incubation period
-     **/
-    public void setRetentionPeriod(final short value) {
-        setShort(offRetentionPeriod, value);
-    }
-
-    /**
-     * Signal strength threshold (dBm) for distinguishing close proximity and far
-     * away contact based on RSSI
-     **/
-    public void setSignalStrengthThreshold(final double value) {
-        setDouble(offSignalStrengthThreshold, value);
-    }
-
-    /**
-     * Contact duration threshold (milliseconds) for distinguishing continuous and
-     * distinct contact periods
-     **/
-    public void setContactDurationThreshold(final int value) {
-        setInt(offContactDurationThreshold, value);
-    }
-
-    /**
-     * Exposure duration threshold (milliseconds) for disease transmission.
-     **/
-    public void setExposureDurationThreshold(final int value) {
-        setInt(offExposureDurationThreshold, value);
-    }
-
-    /**
-     * Server address for next update
-     **/
-    public void setServerAddress(final String value) {
-        setString(offServerAddress, value);
-    }
-
-    /**
-     * Get health status for a device identifer.
-     *
-     * @param identifier Device identifier.
-     * @return True for infectious, false otherwise.
-     */
-    public boolean getHealthStatus(final long identifier) {
-        boolean infectious = false;
-        final int id = (int) (identifier % C19XApplication.anonymousIdRange);
-        final int blockIndex = offHealthStatus + id / 8;
-        final int bitIndex = id % 8;
-        try {
-            final byte block = byteBuffer.get(blockIndex);
-            final byte masked = (byte) (block & bitmasks[bitIndex]);
-            infectious = (((masked >> bitIndex) & bitmasks[0]) == 1);
-        } finally {
-        }
-        return infectious;
-    }
-
-    /**
-     * Set health status for a device identifier.
-     *
-     * @param identifier Device identifier.
-     * @param infectious True for infectious, false otherwise.
-     */
-    public void setHealthStatus(final long identifier, final boolean infectious) {
-        final int id = (int) (identifier % C19XApplication.anonymousIdRange);
-        final int blockIndex = offHealthStatus + id / 8;
-        final int bitIndex = id % 8;
-        try {
-            byte block = (byte) (byteBuffer.get(blockIndex) & ~bitmasks[bitIndex]);
-            if (infectious) {
-                block |= (1 << bitIndex);
-            } else {
-                block &= ~(1 << bitIndex);
+            final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(data.length);
+            final byte[] buffer = new byte[1024];
+            while (!deflater.finished()) {
+                int count = deflater.deflate(buffer); // returns the generated code... index
+                byteArrayOutputStream.write(buffer, 0, count);
             }
-            byteBuffer.put(blockIndex, block);
-        } finally {
+            byteArrayOutputStream.close();
+            final byte[] compressedData = byteArrayOutputStream.toByteArray();
+            return compressedData;
+        } catch (IOException e) {
+            return null;
         }
     }
 
+    /**
+     * Decompress data.
+     *
+     * @param compressedData Compressed data.
+     * @return Source data, or null on failure.
+     */
+    public static byte[] decompress(byte[] compressedData) {
+        final Inflater inflater = new Inflater();
+        inflater.setInput(compressedData);
+        try {
+            final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(compressedData.length);
+            final byte[] buffer = new byte[1024];
+            while (!inflater.finished()) {
+                int count = inflater.inflate(buffer);
+                byteArrayOutputStream.write(buffer, 0, count);
+            }
+            byteArrayOutputStream.close();
+            final byte[] data = byteArrayOutputStream.toByteArray();
+            return data;
+        } catch (IOException | DataFormatException e) {
+            return null;
+        }
+    }
 }
