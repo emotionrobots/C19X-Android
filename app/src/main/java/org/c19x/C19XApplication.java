@@ -80,7 +80,7 @@ public class C19XApplication extends Application {
         timestamp = getTimestamp();
         bluetoothStateMonitor = getBluetoothStateMonitor();
         riskAnalysis = getRiskAnalysis();
-        startGlobalStatusLogAutomaticUpdate();
+        //startGlobalStatusLogAutomaticUpdate();
     }
 
     @Override
@@ -90,7 +90,7 @@ public class C19XApplication extends Application {
         getBluetoothStateMonitor().stop();
         getBeaconReceiver().removeListener(getDetectionEventLog());
         getDetectionEventLog().close();
-        stopGlobalStatusLogAutomaticUpdate();
+        //stopGlobalStatusLogAutomaticUpdate();
         getTimer().cancel();
     }
 

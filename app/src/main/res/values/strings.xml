@@ -6,13 +6,13 @@
     <string name="welcome_subtitle">Setting up your app</string>
     <string name="welcome_progress_id">\u2b55 Generating anonymous device identifier</string>
     <string name="welcome_progress_beacon">\u2b55 Starting bluetooth location beacon</string>
-    <string name="welcome_progress_data">\u2b55 Downloading disease transmission data</string>
+    <string name="welcome_progress_data">\u2b55 Getting disease transmission data</string>
     <string name="welcome_progress_id_done">\u2705 Generating anonymous device identifier</string>
     <string name="welcome_progress_beacon_done">\u2705 Starting bluetooth location beacon</string>
-    <string name="welcome_progress_data_done">\u2705 Downloading disease transmission data</string>
+    <string name="welcome_progress_data_done">\u2705 Getting disease transmission data</string>
     <string name="welcome_progress_id_failed">\u274C Generating anonymous device identifier</string>
     <string name="welcome_progress_beacon_failed">\u274C Starting bluetooth location beacon</string>
-    <string name="welcome_progress_data_failed">\u274C Downloading disease transmission data</string>
+    <string name="welcome_progress_data_failed">\u274C Getting disease transmission data</string>
 
     <string name="healthTitle">How are you today?</string>
     <string name="healthOptionNoSymptom">I do not have a high temperature or a new continuous cough</string>
