@@ -2,18 +2,13 @@ package org.c19x.gui;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.RadioButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
@@ -85,7 +80,7 @@ public class MainActivity extends Activity {
         Logger.info(tag, "Starting main activity");
 
         // Setup app UI
-        setFullscreen();
+        ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_main);
         setDefaultState();
 
@@ -130,7 +125,6 @@ public class MainActivity extends Activity {
                     if (C19XApplication.getBluetoothStateMonitor().isEnabled()) {
                         bluetoothStateMonitorListener.enabled();
                     }
-                    Toast.makeText(thisActivity, "Device registered", Toast.LENGTH_LONG);
                 }
             }
         };
@@ -139,7 +133,6 @@ public class MainActivity extends Activity {
         deviceRegistration.addListener(deviceRegistrationListener);
         if (!deviceRegistration.isRegistered()) {
             Logger.info(tag, "Device registration required");
-            Toast.makeText(this, "Starting anonymous registration", Toast.LENGTH_LONG);
             new Thread(() -> deviceRegistration.register()).start();
         } else {
             Logger.info(tag, "Device registration not required");
@@ -207,7 +200,7 @@ public class MainActivity extends Activity {
             public void enabled() {
                 Logger.debug(tag, "Bluetooth is turned on, starting beacon");
                 if (C19XApplication.getDeviceRegistration().isRegistered()) {
-                    C19XApplication.getBeaconTransmitter().start(C19XApplication.getDeviceRegistration().getIdentifier());
+                    C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
                 }
                 C19XApplication.getBeaconReceiver().start();
             }
@@ -247,7 +240,7 @@ public class MainActivity extends Activity {
     private void checkBluetoothAndStartBeacon() {
         if (!C19XApplication.getBluetoothStateMonitor().isSupported()) {
             Logger.error(tag, "Bluetooth is not supported on this device");
-            showDialog(R.string.dialogBluetoothUnsupported, () -> finish(), null);
+            ActivityUtil.showDialog(this, R.string.dialogBluetoothUnsupported, () -> finish(), null);
             return;
         }
 
@@ -256,7 +249,7 @@ public class MainActivity extends Activity {
         if (ActivityCompat.checkSelfPermission(this, locationPermission) != PackageManager.PERMISSION_GRANTED) {
             Logger.debug(tag, "Requesting access location permission");
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, locationPermission)) {
-                showDialog(R.string.dialogLocationPermissionRationale, () -> ActivityCompat.requestPermissions(this, new String[]{locationPermission}, 1), () -> finish());
+                ActivityUtil.showDialog(this, R.string.dialogLocationPermissionRationale, () -> ActivityCompat.requestPermissions(this, new String[]{locationPermission}, 1), () -> finish());
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{locationPermission}, 1);
             }
@@ -274,15 +267,6 @@ public class MainActivity extends Activity {
     // GUI =========================================================================================
 
     /**
-     * Set app as fullscreen app.
-     */
-    private final void setFullscreen() {
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-    }
-
-    /**
      * Set default UI state
      */
     private final void setDefaultState() {
@@ -292,7 +276,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Set health status
+     * Set health status from GUI
      *
      * @param view
      */
@@ -320,20 +304,28 @@ public class MainActivity extends Activity {
             }
 
             // Post status report
-            final long id = C19XApplication.getBeaconTransmitter().getId();
+            final long id = C19XApplication.getDeviceRegistration().getIdentifier();
             final byte currentHealthStatus = C19XApplication.getHealthStatus().getStatus();
             final byte targetHealthStatus = viewHealthStatus;
             if (targetHealthStatus != currentHealthStatus) {
-                Logger.debug(tag, "Self-report status update (current={},target={})", HealthStatus.toString(currentHealthStatus), HealthStatus.toString(targetHealthStatus));
-                C19XApplication.getNetworkClient().postHealthStatus(id, C19XApplication.getDeviceRegistration().getSharedSecretKey(), targetHealthStatus, r -> {
-                    if (r.getValue()) {
-                        C19XApplication.getHealthStatus().setStatus(targetHealthStatus);
-                        Logger.debug(tag, "Self-report status update successful (current={},previous={})", C19XApplication.getHealthStatus(), HealthStatus.toString(currentHealthStatus));
-                    } else {
-                        Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
-                        setHealthStatus(currentHealthStatus);
-                    }
-                });
+                if (C19XApplication.getDeviceRegistration().isRegistered()) {
+                    Logger.debug(tag, "Self-report status update (current={},target={})", HealthStatus.toString(currentHealthStatus), HealthStatus.toString(targetHealthStatus));
+                    C19XApplication.getNetworkClient().postHealthStatus(id, C19XApplication.getDeviceRegistration().getSharedSecretKey(), targetHealthStatus, r -> {
+                        if (r.getValue()) {
+                            C19XApplication.getHealthStatus().setStatus(targetHealthStatus);
+                            Logger.debug(tag, "Self-report status update successful (current={},previous={})", C19XApplication.getHealthStatus(), HealthStatus.toString(currentHealthStatus));
+                            ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusSuccess, null, null);
+                        } else {
+                            Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
+                            setHealthStatus(currentHealthStatus);
+                            ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusFailedOnNetwork, null, null);
+                        }
+                    });
+                } else {
+                    Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
+                    setHealthStatus(currentHealthStatus);
+                    ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusFailedOnRegistration, null, null);
+                }
             }
         }
     }
@@ -417,34 +409,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * Show dialog with OK and CANCEL buttons.
-     *
-     * @param messageId Message to display.
-     * @param positive  Action on OK, null to exclude OK button.
-     * @param negative  Action on CANCEL, null to exclude CANCEL button.
-     */
-    private void showDialog(final int messageId, final Runnable positive, final Runnable negative) {
-        final Activity activity = this;
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity).setMessage(messageId);
-        if (positive != null) {
-            builder = builder.setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    positive.run();
-                }
-            });
-        }
-        if (negative != null) {
-            builder.setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    negative.run();
-                }
-            });
-        }
-        builder.setCancelable(false).show();
-    }
 
 //    /**
 //     * Make this application a foreground application with an active notification. This is necessary to get round request limits.

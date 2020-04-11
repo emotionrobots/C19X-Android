@@ -39,7 +39,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
-            final long timestamp = System.currentTimeMillis();
+            final long timestamp = C19XApplication.getTimestamp().getTime();
             final int rssi = result.getRssi();
             final List<ParcelUuid> parcelUuids = result.getScanRecord().getServiceUuids();
             Logger.debug(tag, "Beacon receiver found transmitter (timestamp={},rssi={},uuids={})", timestamp, rssi, parcelUuids);
@@ -69,6 +69,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                     Logger.warn(tag, "Beacon receiver scan failed (error=unknown,errorCode={})", errorCode);
                     break;
             }
+            started = false;
         }
     };
     private boolean started = false;

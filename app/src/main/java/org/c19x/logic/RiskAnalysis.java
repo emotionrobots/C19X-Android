@@ -65,10 +65,10 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         riskFactors.governmentAdvice = globalStatusLog.getGovernmentAdvice();
 
         for (int i = closeContacts.size(); i-- > 0; ) {
-            final long id = closeContacts.keyAt(i);
+            final long beaconId = closeContacts.keyAt(i);
             final long duration = closeContacts.valueAt(i).value;
-            final boolean infectious = globalStatusLog.getInfectious((int) (id % C19XApplication.anonymousIdRange));
-            Logger.debug(tag, "Contact (id={},duration={},infectious={})", id, duration, infectious);
+            final boolean infectious = globalStatusLog.getInfectious(beaconId);
+            Logger.debug(tag, "Contact (beaconId={},duration={},infectious={})", beaconId, duration, infectious);
             riskFactors.closeContactDuration += duration;
             if (infectious) {
                 riskFactors.closeContactWithInfectiousDuration += duration;
@@ -76,6 +76,10 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         }
         return riskFactors;
     }
+
+//    private final static long decodeBeaconId(final DeviceRegistration deviceRegistration, final long beaconId) {
+//        deviceRegistration.getSharedSecret()
+//    }
 
     /**
      * Compute close contact status based on global parameters and risk factors

@@ -230,7 +230,7 @@ public class DetectionEventLog extends BeaconListener {
                 final long contactDuration = timestamp - lastTimestamp.value;
                 if (contactDuration < contactEpisodeThreshold) {
                     // Period of close encounter, accumulate period for device in daily log
-                    final long today = (System.currentTimeMillis() / millisPerDay) * millisPerDay;
+                    final long today = (C19XApplication.getTimestamp().getTime() / millisPerDay) * millisPerDay;
                     // Get today's encounter log, or create one if doesn't exist
                     LongSparseArray<MutableLong> todayEncounterLog = dailyEncounterLog.get(today, null);
                     if (todayEncounterLog == null) {
@@ -315,7 +315,7 @@ public class DetectionEventLog extends BeaconListener {
         logLock.lock();
         try {
             // Calculate time limit based on retention
-            final long today = (System.currentTimeMillis() / millisPerDay) * millisPerDay;
+            final long today = (C19XApplication.getTimestamp().getTime() / millisPerDay) * millisPerDay;
             final long limit = today - (retentionPeriodDays * millisPerDay);
             // Clear daily encounter log
             for (int i = dailyEncounterLog.size(); i-- > 0; ) {

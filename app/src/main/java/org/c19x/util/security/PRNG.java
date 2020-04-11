@@ -68,5 +68,15 @@ public class PRNG {
     public final void getBytes(final byte[] bytes) {
         random.nextBytes(bytes);
     }
+
+    /**
+     * Generate a random integer [0,bound]
+     *
+     * @param bound Upper bound (exclusive).
+     * @return
+     */
+    public final int getInt(final int bound) {
+        return random.nextInt(bound);
+    }
 }
 

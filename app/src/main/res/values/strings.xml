@@ -1,6 +1,19 @@
 <resources>
     <string name="app_name">C19X</string>
 
+
+    <string name="welcome_title">COVID-19 Tracer</string>
+    <string name="welcome_subtitle">Setting up your app</string>
+    <string name="welcome_progress_id">\u2b55 Generating anonymous device identifier</string>
+    <string name="welcome_progress_beacon">\u2b55 Starting bluetooth location beacon</string>
+    <string name="welcome_progress_data">\u2b55 Downloading disease transmission data</string>
+    <string name="welcome_progress_id_done">\u2705 Generating anonymous device identifier</string>
+    <string name="welcome_progress_beacon_done">\u2705 Starting bluetooth location beacon</string>
+    <string name="welcome_progress_data_done">\u2705 Downloading disease transmission data</string>
+    <string name="welcome_progress_id_failed">\u274C Generating anonymous device identifier</string>
+    <string name="welcome_progress_beacon_failed">\u274C Starting bluetooth location beacon</string>
+    <string name="welcome_progress_data_failed">\u274C Downloading disease transmission data</string>
+
     <string name="healthTitle">How are you today?</string>
     <string name="healthOptionNoSymptom">I do not have a high temperature or a new continuous cough</string>
     <string name="healthOptionHasSymptom">I have a high temperature and/or a new continuous cough</string>
@@ -35,7 +48,15 @@
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="next">Next</string>
 
+    <string name="dialogSetHealthStatusSuccess">Status update has been shared anonymously to protect the people around you. Thank you.</string>
+    <string name="dialogSetHealthStatusFailedOnNetwork">Cannot submit status update. No network connection. Please try again later.</string>
+    <string name="dialogSetHealthStatusFailedOnRegistration">Cannot submit status update. Registration in progress. Please try again later.</string>
     <string name="dialogBluetoothUnsupported">Bluetooth is unsupported on this device. This app needs Bluetooth to find other app users near you.</string>
     <string name="dialogLocationPermissionRationale">Location data is required to estimate your proximity to other app users. This app does not use GPS tracking and your location is never recorded or shared.</string>
+
+    <string name="title_activity_welcome">Welcome</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
 </resources>

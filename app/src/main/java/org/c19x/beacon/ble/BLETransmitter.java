@@ -86,7 +86,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     }
 
     @Override
-    public void start(long id) {
+    public synchronized void start(long id) {
         if (!started) {
             this.id = id;
             final AdvertiseData scanResponse = new AdvertiseData.Builder()
@@ -110,7 +110,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     }
 
     @Override
-    public void stop() {
+    public synchronized void stop() {
         if (started) {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled() && bluetoothLeAdvertiser != null) {
                 try {
@@ -130,12 +130,24 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     }
 
     @Override
-    public boolean isStarted() {
+    public synchronized boolean isStarted() {
         return started;
     }
 
     @Override
-    public long getId() {
+    public synchronized long getId() {
         return id;
+    }
+
+    @Override
+    public synchronized void setId(final long id) {
+        final boolean state = started;
+        if (started) {
+            stop();
+        }
+        if (state) {
+            start(id);
+        }
+        this.id = id;
     }
 }

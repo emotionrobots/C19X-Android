@@ -15,8 +15,10 @@ import org.c19x.data.DeviceRegistration;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.data.HealthStatus;
+import org.c19x.data.Timestamp;
 import org.c19x.logic.RiskAnalysis;
 import org.c19x.network.NetworkClient;
+import org.c19x.network.response.NetworkResponse;
 import org.c19x.util.Logger;
 import org.c19x.util.Storage;
 import org.c19x.util.bluetooth.BluetoothStateMonitor;
@@ -26,7 +28,12 @@ import java.security.MessageDigest;
 import java.util.Calendar;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
 
+/**
+ * Application and singletons.
+ */
 public class C19XApplication extends Application {
     private final static String tag = C19XApplication.class.getName();
 
@@ -42,16 +49,16 @@ public class C19XApplication extends Application {
     /**
      * Default application server on first use, this will be changed by downloaded updates.
      */
-    public final static String defaultServer = "http://711.no-ip.biz:80";
+    public final static String defaultServer = "http://c19x.servehttp.com:80";
 
 
     private static Application application;
     private static Context context;
     private static Storage storage;
+    private static Timer timer;
 
+    private static Timestamp timestamp;
     private static DeviceRegistration deviceRegistration;
-
-
     private static HealthStatus healthStatus;
     private static BluetoothStateMonitor bluetoothStateMonitor;
     private static BeaconTransmitter beaconTransmitter;
@@ -68,9 +75,11 @@ public class C19XApplication extends Application {
         application = this;
         context = getApplicationContext();
         storage = getStorage();
+        timer = getTimer();
 
+        timestamp = getTimestamp();
         bluetoothStateMonitor = getBluetoothStateMonitor();
-        this.riskAnalysis = getRiskAnalysis();
+        riskAnalysis = getRiskAnalysis();
         startGlobalStatusLogAutomaticUpdate();
     }
 
@@ -82,6 +91,7 @@ public class C19XApplication extends Application {
         getBeaconReceiver().removeListener(getDetectionEventLog());
         getDetectionEventLog().close();
         stopGlobalStatusLogAutomaticUpdate();
+        getTimer().cancel();
     }
 
     /**
@@ -106,15 +116,38 @@ public class C19XApplication extends Application {
     }
 
     /**
-     * Get singleton health status register.
+     * Get timer.
      *
      * @return
      */
-    public final static HealthStatus getHealthStatus() {
-        if (healthStatus == null) {
-            healthStatus = new HealthStatus();
+    public final static Timer getTimer() {
+        if (timer == null) {
+            timer = new Timer();
         }
-        return healthStatus;
+        return timer;
+    }
+
+    /**
+     * Get timestamp.
+     *
+     * @return
+     */
+    public final static Timestamp getTimestamp() {
+        if (timestamp == null) {
+            timestamp = new Timestamp();
+            // Sync time with server once every hour
+            getTimer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    getNetworkClient().getTimestampFromBob(r -> {
+                        if (r.getNetworkResponse() == NetworkResponse.OK) {
+                            getTimestamp().setServerTime(r.getValue());
+                        }
+                    });
+                }
+            }, 0, 60 * 60 * 1000);
+        }
+        return timestamp;
     }
 
     /**
@@ -127,6 +160,33 @@ public class C19XApplication extends Application {
             deviceRegistration = new DeviceRegistration();
         }
         return deviceRegistration;
+    }
+
+    /**
+     * Get randomly selected alias identifier for current retention period.
+     *
+     * @return
+     */
+    public final static long getAliasIdentifier() {
+        final long toTime = getTimestamp().getTime();
+        final long fromTime = toTime - (getGlobalStatusLog().getRetentionPeriod() * 86400000);
+        long aliasIdentifier = -1;
+        if (getDeviceRegistration().isRegistered()) {
+            aliasIdentifier = getDeviceRegistration().getAliasIdentifier().getAlias(fromTime, toTime);
+        }
+        return aliasIdentifier;
+    }
+
+    /**
+     * Get singleton health status register.
+     *
+     * @return
+     */
+    public final static HealthStatus getHealthStatus() {
+        if (healthStatus == null) {
+            healthStatus = new HealthStatus();
+        }
+        return healthStatus;
     }
 
     /**
@@ -150,6 +210,18 @@ public class C19XApplication extends Application {
     public final static BeaconTransmitter getBeaconTransmitter() {
         if (beaconTransmitter == null) {
             beaconTransmitter = new BLETransmitter();
+            /**
+             * Refresh beacon transmitter alias identifier every 40 minutes
+             */
+            getTimer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    final long aliasIdentifier = getAliasIdentifier();
+                    if (aliasIdentifier != -1) {
+                        getBeaconTransmitter().setId(aliasIdentifier);
+                    }
+                }
+            }, 0, 60000); //Math.round(getGlobalStatusLog().getExposureDurationThreshold() * 1.5 * 60 * 1000));
         }
         return beaconTransmitter;
     }
@@ -271,7 +343,7 @@ public class C19XApplication extends Application {
             globalStatusLogUpdateTask = PendingIntent.getBroadcast(getContext(), 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
             final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
 //            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, globalStatusLogUpdateTask);
-            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 10000, globalStatusLogUpdateTask);
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 2000, globalStatusLogUpdateTask);
         }
     }
 

@@ -32,4 +32,11 @@ public interface BeaconTransmitter extends Broadcaster<BeaconListener> {
      * @return
      */
     long getId();
+
+    /**
+     * Set identifier being broadcasted by transmitter.
+     *
+     * @param
+     */
+    void setId(final long id);
 }

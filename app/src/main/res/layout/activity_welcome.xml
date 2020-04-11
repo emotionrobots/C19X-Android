@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff"
+    tools:context=".gui.Welcome">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@id/welcome_button_next"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/welcome_image"
+            android:layout_width="350dp"
+            android:layout_height="350dp"
+            android:scaleType="fitXY"
+            android:padding="@dimen/marginMedium"
+            android:src="@drawable/virus"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/welcome_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/welcome_image"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:text="@string/welcome_title"
+            android:textColor="@color/colorDarkGrey"
+            android:textSize="@dimen/textExtraLarge" />
+
+        <TextView
+            android:id="@+id/welcome_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/welcome_title"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:paddingTop="@dimen/marginLarge"
+            android:paddingBottom="@dimen/marginLarge"
+            android:text="@string/welcome_subtitle"
+            android:textSize="@dimen/textMedium" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/welcome_subtitle"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent">
+
+            <TextView
+                android:id="@+id/welcome_progress_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintLeft_toLeftOf="parent"
+                android:text="@string/welcome_progress_id"
+                android:textSize="@dimen/textSmall" />
+
+            <TextView
+                android:id="@+id/welcome_progress_beacon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@id/welcome_progress_id"
+                app:layout_constraintLeft_toLeftOf="parent"
+                android:paddingTop="@dimen/marginMedium"
+                android:paddingBottom="@dimen/marginMedium"
+                android:text="@string/welcome_progress_beacon"
+                android:textSize="@dimen/textSmall" />
+
+            <TextView
+                android:id="@+id/welcome_progress_data"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@id/welcome_progress_beacon"
+                app:layout_constraintLeft_toLeftOf="parent"
+                android:text="@string/welcome_progress_data"
+                android:textSize="@dimen/textSmall" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <Button
+        android:id="@+id/welcome_button_next"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_margin="@dimen/marginMedium"
+        android:text="@string/next"
+        android:visibility="invisible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

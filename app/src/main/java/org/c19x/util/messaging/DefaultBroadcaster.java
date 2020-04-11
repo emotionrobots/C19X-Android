@@ -1,7 +1,7 @@
 package org.c19x.util.messaging;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 /**
@@ -10,7 +10,7 @@ import java.util.function.Consumer;
  * @param <T>
  */
 public class DefaultBroadcaster<T> implements Broadcaster<T> {
-    private final List<T> listeners = new ArrayList<>();
+    private final Queue<T> listeners = new ConcurrentLinkedQueue<>();
 
     /**
      * Add listener.

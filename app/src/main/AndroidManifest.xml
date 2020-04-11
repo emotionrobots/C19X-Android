@@ -5,35 +5,32 @@
     <!-- Must support Bluetooth LE -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
-        android:required="true" />
-
-    <!-- Permissions for bluetooth discovery -->
+        android:required="true" /> <!-- Permissions for bluetooth discovery -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <!-- Permissions for data network -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" /> <!-- Permissions for data network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:name="org.c19x.C19XApplication"
+        android:name=".C19XApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/AppTheme">
-        <activity android:name="org.c19x.gui.MainActivity">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+        <activity android:name=".gui.Welcome">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".gui.MainActivity"></activity>
 
-        <receiver android:name="org.c19x.data.GlobalStatusLogReceiver" />
+        <receiver android:name=".data.GlobalStatusLogReceiver" />
     </application>
 
 </manifest>

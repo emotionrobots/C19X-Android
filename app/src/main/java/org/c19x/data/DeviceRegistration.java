@@ -5,6 +5,7 @@ import org.c19x.network.NetworkClient;
 import org.c19x.network.response.NetworkResponse;
 import org.c19x.util.Logger;
 import org.c19x.util.messaging.DefaultBroadcaster;
+import org.c19x.util.security.AliasIdentifier;
 import org.c19x.util.security.KeyExchange;
 
 import javax.crypto.SecretKey;
@@ -15,6 +16,7 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
     private long identifier = -1;
     private byte[] sharedSecret = null;
     private SecretKey sharedSecretKey = null;
+    private AliasIdentifier aliasIdentifier = null;
 
     public DeviceRegistration() {
     }
@@ -25,7 +27,7 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
      * @return True if device has been registered, false otherwise.
      */
     public boolean isRegistered() {
-        return sharedSecret != null && sharedSecretKey != null;
+        return sharedSecret != null && sharedSecretKey != null && aliasIdentifier != null;
     }
 
     /**
@@ -56,6 +58,15 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
     }
 
     /**
+     * Get device alias identifier for broadcasting in the clear over Bluetooth beacon.
+     *
+     * @return
+     */
+    public AliasIdentifier getAliasIdentifier() {
+        return aliasIdentifier;
+    }
+
+    /**
      * Register device with server to obtain a server allocated globally unique device identifier
      * and establish shared secret between device and server for cryptographic operations.
      */
@@ -77,6 +88,7 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
                                 identifier = keyExchangeResponse.getIdentifier();
                                 sharedSecret = keyExchange.getSharedSecret();
                                 sharedSecretKey = keyExchange.getSharedSecretKey();
+                                aliasIdentifier = new AliasIdentifier(sharedSecret);
                                 broadcast(l -> l.registration(true, identifier));
                                 Logger.info(tag, "Device registration success (identifier={})", identifier);
                             } else {

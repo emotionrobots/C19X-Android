@@ -8,4 +8,6 @@
     <color name="colorAmber">#FF7E00</color>
     <color name="colorRed">#7E0000</color>
 
+    <color name="black_overlay">#66000000</color>
+
 </resources>

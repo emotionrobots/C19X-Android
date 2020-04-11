@@ -4,8 +4,8 @@ package org.c19x.network.response;
  * Generic boolean response.
  */
 public class BooleanResponse extends Response {
-    private final static byte[] responseTrue = new byte[]{1};
-    private final static byte[] responseFalse = new byte[]{0};
+    public final static byte[] TRUE = new byte[]{1};
+    public final static byte[] FALSE = new byte[]{0};
     private final boolean value;
 
     /**
@@ -29,7 +29,7 @@ public class BooleanResponse extends Response {
      * @return
      */
     public final static byte[] encode(final boolean value) {
-        return (value ? responseTrue : responseFalse);
+        return (value ? TRUE : FALSE);
     }
 
     /**

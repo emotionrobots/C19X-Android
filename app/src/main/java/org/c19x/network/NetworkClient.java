@@ -17,6 +17,7 @@ import org.c19x.C19XApplication;
 import org.c19x.network.response.BooleanResponse;
 import org.c19x.network.response.ByteArrayResponse;
 import org.c19x.network.response.KeyExchangeResponse;
+import org.c19x.network.response.LongResponse;
 import org.c19x.network.response.NetworkResponse;
 import org.c19x.util.Logger;
 import org.c19x.util.security.SymmetricCipher;
@@ -37,6 +38,7 @@ public class NetworkClient {
     private final static long hourMillis = 60 * minuteMillis;
 
     // URL contexts and parameter keys
+    public final static String contextTime = "t";
     public final static String contextNonce = "n";
     public final static String contextKeyExchange = "k";
     public final static String contextKeyConfirm = "c";
@@ -186,6 +188,18 @@ public class NetworkClient {
     // ============================================================================================
 
     /**
+     * Get server time from Bob (server) to synchronise time on Alice (device).
+     * <p>
+     * http://server:port/t
+     *
+     * @param callback
+     */
+    public void getTimestampFromBob(final Consumer<LongResponse> callback) {
+        final String url = server + "/" + contextTime;
+        request(methodGet, url, null, new RetryCounter(1, 5 * secondMillis, 2), r -> callback.accept(new LongResponse(r)));
+    }
+
+    /**
      * Get randomly generated one-time use nonce from Bob (server) as challenge for authenticating
      * Alice (device) requests, which must include Alice's (device) identifier and encrypted nonce
      * <p>
@@ -257,14 +271,17 @@ public class NetworkClient {
     /**
      * Get global status log from server.
      * <p>
-     * http://server:port/l?t=[timestamp]
+     * http://server:port/l?i=[identifier]&t=[timestamp]
+     * requestBody=encryptedNonce
      *
-     * @param timestamp Current log timestamp.
+     * @param identifier      Alice's (device) globally unique identifier allocated by Bob (server) on registration.
+     * @param sharedSecretKey Alice's (device) and Bob's (server) shared secret key established by key exchange.
+     * @param timestamp       Current log timestamp.
      * @param callback
      */
-    public void getGlobalStatusLog(final long timestamp, final Consumer<ByteArrayResponse> callback) {
-        final String url = server + "/" + contextGlobalStatusLog + "?" + keyLogTimestamp + "=" + Long.toString(timestamp);
-        request(methodGet, url, null, new RetryCounter(5, 10 * minuteMillis, 2), r -> callback.accept(r));
+    public void getGlobalStatusLog(final long identifier, final SecretKey sharedSecretKey, final long timestamp, final Consumer<ByteArrayResponse> callback) {
+        final String url = server + "/" + contextGlobalStatusLog + "?" + keyDeviceIdentifier + "=" + identifier + "&" + keyLogTimestamp + "=" + Long.toString(timestamp);
+        postAuthRequestByteArray(url, null, new RetryCounter(5, 10 * minuteMillis, 2), identifier, sharedSecretKey, callback);
     }
 
     /**
@@ -278,6 +295,20 @@ public class NetworkClient {
      * @param callback
      */
     private void postAuthRequestBoolean(final String url, final byte[] body, final RetryCounter retryCounter, final long identifier, final SecretKey sharedSecretKey, final Consumer<BooleanResponse> callback) {
+        postAuthRequestByteArray(url, body, retryCounter, identifier, sharedSecretKey, response -> callback.accept(new BooleanResponse(response)));
+    }
+
+    /**
+     * Post authenticated request to server for byte array response.
+     *
+     * @param url
+     * @param body
+     * @param retryCounter
+     * @param identifier
+     * @param sharedSecretKey
+     * @param callback
+     */
+    private void postAuthRequestByteArray(final String url, final byte[] body, final RetryCounter retryCounter, final long identifier, final SecretKey sharedSecretKey, final Consumer<ByteArrayResponse> callback) {
         getNonceFromBob(identifier, nonceResponse -> {
             if (nonceResponse.getNetworkResponse() == NetworkResponse.OK) {
                 byte[] nonceAndBody = nonceResponse.getByteArray();
@@ -287,12 +318,10 @@ public class NetworkClient {
                     System.arraycopy(body, 0, nonceAndBody, nonceResponse.getByteArray().length, body.length);
                 }
                 final byte[] encryptedNonce = SymmetricCipher.encrypt(sharedSecretKey, nonceAndBody);
-                request(methodPost, url, encryptedNonce, retryCounter, response -> {
-                    callback.accept(new BooleanResponse(response));
-                });
+                request(methodPost, url, encryptedNonce, retryCounter, callback);
             } else {
                 Logger.warn(tag, "Failed to get nonce from server (response={})", nonceResponse);
-                callback.accept(new BooleanResponse(nonceResponse));
+                callback.accept(nonceResponse);
             }
         });
     }
