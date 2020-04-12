@@ -38,6 +38,7 @@ public class NetworkClient {
     private final static long hourMillis = 60 * minuteMillis;
 
     // URL contexts and parameter keys
+    public final static String contextPing = "p";
     public final static String contextTime = "t";
     public final static String contextNonce = "n";
     public final static String contextKeyExchange = "k";
@@ -184,8 +185,20 @@ public class NetworkClient {
         requestQueue.add(request);
     }
 
-    // Security functions
+    // Server functions
     // ============================================================================================
+
+    /**
+     * Check connection to server by sending an empty request.
+     * <p>
+     * http://server:port/p
+     *
+     * @param callback
+     */
+    public void checkConnectionToServer(final Consumer<BooleanResponse> callback) {
+        final String url = server + "/" + contextPing;
+        request(methodGet, url, null, new RetryCounter(0, 0, 1), r -> callback.accept(new BooleanResponse(r)));
+    }
 
     /**
      * Get server time from Bob (server) to synchronise time on Alice (device).

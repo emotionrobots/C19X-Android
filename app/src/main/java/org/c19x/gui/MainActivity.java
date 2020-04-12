@@ -1,22 +1,21 @@
 package org.c19x.gui;
 
-import android.Manifest;
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
-import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
 import org.c19x.beacon.BeaconListener;
-import org.c19x.data.DeviceRegistration;
-import org.c19x.data.DeviceRegistrationListener;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogListener;
 import org.c19x.data.HealthStatus;
@@ -34,9 +33,28 @@ import java.util.TimeZone;
  */
 public class MainActivity extends Activity {
     private final static String tag = MainActivity.class.getName();
+    private final static int notificationChannelId = 1;
 
     // Bluetooth state listener used by startBeacon and stopBeacon
-    private BluetoothStateMonitorListener bluetoothStateMonitorListener;
+    private BluetoothStateMonitorListener bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
+
+        @Override
+        public void enabled() {
+            Logger.debug(tag, "Bluetooth is turned on, starting beacon");
+            if (C19XApplication.getDeviceRegistration().isRegistered()) {
+                C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
+            }
+            C19XApplication.getBeaconReceiver().start();
+        }
+
+        @Override
+        public void disabling() {
+            Logger.debug(tag, "Bluetooth is turning off, stopping beacon");
+            C19XApplication.getBeaconTransmitter().stop();
+            C19XApplication.getBeaconReceiver().stop();
+        }
+    };
+
     // Beacon listener used by startBeacon and stopBeacon to update UI on state change.
     private BeaconListener beaconListener;
 
@@ -84,11 +102,8 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         setDefaultState();
 
-        // Start registration
-        startDeviceRegistration();
-
-        // Start monitoring
-        startBeacon();
+        // Start monitoring bluetooth state
+        startBluetoothStateMonitor();
 
         // Display risk analysis results
         C19XApplication.getRiskAnalysis().addListener(riskAnalysisListener);
@@ -96,6 +111,7 @@ public class MainActivity extends Activity {
         // Display global status log version update
         final GlobalStatusLog globalStatusLog = C19XApplication.getGlobalStatusLog();
         globalStatusLog.addListener(globalStatusLogListener);
+        C19XApplication.startGlobalStatusLogAutomaticUpdate();
     }
 
     @Override
@@ -115,41 +131,12 @@ public class MainActivity extends Activity {
         Logger.info(tag, "Stopped main activity");
     }
 
-    // REGISTRATION ================================================================================
-    private final void startDeviceRegistration() {
-        final Activity thisActivity = this;
-        final DeviceRegistrationListener deviceRegistrationListener = new DeviceRegistrationListener() {
-            @Override
-            public void registration(boolean success, long identifier) {
-                if (success) {
-                    if (C19XApplication.getBluetoothStateMonitor().isEnabled()) {
-                        bluetoothStateMonitorListener.enabled();
-                    }
-                }
-            }
-        };
-
-        final DeviceRegistration deviceRegistration = C19XApplication.getDeviceRegistration();
-        deviceRegistration.addListener(deviceRegistrationListener);
-        if (!deviceRegistration.isRegistered()) {
-            Logger.info(tag, "Device registration required");
-            new Thread(() -> deviceRegistration.register()).start();
-        } else {
-            Logger.info(tag, "Device registration not required");
-        }
-
-    }
-
     // BEACON ======================================================================================
+
     /**
      * Start beacon transmitter and receiver, and register this activity as listener
      */
-    private final void startBeacon() {
-        if (beaconListener != null) {
-            Logger.warn(tag, "Ignored call to startBeacon(), as beacon already started");
-            return;
-        }
-        // Make this activity a listener for beacon transmitter and receiver status to update UI
+    private final void startBluetoothStateMonitor() {
         this.beaconListener = new BeaconListener() {
             @Override
             public void start() {
@@ -192,29 +179,7 @@ public class MainActivity extends Activity {
         };
         C19XApplication.getBeaconTransmitter().addListener(beaconListener);
         C19XApplication.getBeaconReceiver().addListener(beaconListener);
-
-        // Use bluetooth state monitor to ensure beacon is switched on/off upon bluetooth on/off by other sources (e.g. manual control on the tablet)
-        this.bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
-
-            @Override
-            public void enabled() {
-                Logger.debug(tag, "Bluetooth is turned on, starting beacon");
-                if (C19XApplication.getDeviceRegistration().isRegistered()) {
-                    C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
-                }
-                C19XApplication.getBeaconReceiver().start();
-            }
-
-            @Override
-            public void disabling() {
-                Logger.debug(tag, "Bluetooth is turning off, stopping beacon");
-                C19XApplication.getBeaconTransmitter().stop();
-                C19XApplication.getBeaconReceiver().stop();
-            }
-        };
         C19XApplication.getBluetoothStateMonitor().addListener(bluetoothStateMonitorListener);
-        // Check permissions for bluetooth and ensure it is enabled
-        checkBluetoothAndStartBeacon();
     }
 
     /**
@@ -232,36 +197,6 @@ public class MainActivity extends Activity {
 
         bluetoothStateMonitorListener = null;
         beaconListener = null;
-    }
-
-    /**
-     * Enable bluetooth on the device, and start beacon when bluetooth has been enabled.
-     */
-    private void checkBluetoothAndStartBeacon() {
-        if (!C19XApplication.getBluetoothStateMonitor().isSupported()) {
-            Logger.error(tag, "Bluetooth is not supported on this device");
-            ActivityUtil.showDialog(this, R.string.dialogBluetoothUnsupported, () -> finish(), null);
-            return;
-        }
-
-        // Get location access permission which is required for bluetooth scanning
-        final String locationPermission = Manifest.permission.ACCESS_FINE_LOCATION;
-        if (ActivityCompat.checkSelfPermission(this, locationPermission) != PackageManager.PERMISSION_GRANTED) {
-            Logger.debug(tag, "Requesting access location permission");
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, locationPermission)) {
-                ActivityUtil.showDialog(this, R.string.dialogLocationPermissionRationale, () -> ActivityCompat.requestPermissions(this, new String[]{locationPermission}, 1), () -> finish());
-            } else {
-                ActivityCompat.requestPermissions(this, new String[]{locationPermission}, 1);
-            }
-        }
-
-        // Enable bluetooth
-        if (!C19XApplication.getBluetoothStateMonitor().isEnabled()) {
-            Logger.debug(tag, "Enabling bluetooth");
-            startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
-        } else {
-            bluetoothStateMonitorListener.enabled();
-        }
     }
 
     // GUI =========================================================================================
@@ -407,6 +342,34 @@ public class MainActivity extends Activity {
                 break;
             }
         }
+    }
+
+
+    private final void createNotification() {
+        final String channelId = getString(R.string.app_fullname);
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(channelId, channelId, importance);
+            channel.setDescription("Notification for " + channelId);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(this, Welcome.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.virus)
+                .setContentTitle(channelId)
+                .setContentText("Hello")
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
     }
 
 

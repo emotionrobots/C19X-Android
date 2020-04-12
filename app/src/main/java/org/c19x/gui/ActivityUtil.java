@@ -27,6 +27,29 @@ public class ActivityUtil {
      * @param negative  Action on CANCEL, null to exclude CANCEL button.
      */
     public final static void showDialog(final Activity activity, final int messageId, final Runnable positive, final Runnable negative) {
+        showDialog(activity, -1, -1, messageId, positive, negative);
+    }
+
+    /**
+     * Show dialog with OK and CANCEL buttons.
+     *
+     * @param titleId   Title to display.
+     * @param messageId Message to display.
+     * @param positive  Action on OK, null to exclude OK button.
+     * @param negative  Action on CANCEL, null to exclude CANCEL button.
+     */
+    public final static void showDialog(final Activity activity, final int titleId, final int messageId, final Runnable positive, final Runnable negative) {
+        showDialog(activity, -1, titleId, messageId, positive, negative);
+    }
+
+    /**
+     * Show dialog with OK and CANCEL buttons.
+     *
+     * @param messageId Message to display.
+     * @param positive  Action on OK, null to exclude OK button.
+     * @param negative  Action on CANCEL, null to exclude CANCEL button.
+     */
+    public final static void showDialog(final Activity activity, final int iconId, final int titleId, final int messageId, final Runnable positive, final Runnable negative) {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity).setMessage(messageId);
         if (positive != null) {
             builder = builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
@@ -46,8 +69,13 @@ public class ActivityUtil {
                 }
             });
         }
+        if (titleId != -1) {
+            builder.setTitle(titleId);
+        }
+        if (iconId != -1) {
+            builder.setIcon(iconId);
+        }
         builder.setCancelable(positive == null && negative == null).show();
     }
-
 
 }

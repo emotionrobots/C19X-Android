@@ -5,6 +5,7 @@ import android.app.Application;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 
 import org.c19x.beacon.BeaconReceiver;
 import org.c19x.beacon.BeaconTransmitter;
@@ -54,6 +55,7 @@ public class C19XApplication extends Application {
 
     private static Application application;
     private static Context context;
+    private static SharedPreferences preferences;
     private static Storage storage;
     private static Timer timer;
 
@@ -80,7 +82,6 @@ public class C19XApplication extends Application {
         timestamp = getTimestamp();
         bluetoothStateMonitor = getBluetoothStateMonitor();
         riskAnalysis = getRiskAnalysis();
-        //startGlobalStatusLogAutomaticUpdate();
     }
 
     @Override
@@ -90,7 +91,7 @@ public class C19XApplication extends Application {
         getBluetoothStateMonitor().stop();
         getBeaconReceiver().removeListener(getDetectionEventLog());
         getDetectionEventLog().close();
-        //stopGlobalStatusLogAutomaticUpdate();
+        stopGlobalStatusLogAutomaticUpdate();
         getTimer().cancel();
     }
 
@@ -104,11 +105,40 @@ public class C19XApplication extends Application {
     }
 
     /**
+     * Get app preference.
+     *
+     * @param key          Value key.
+     * @param defaultValue Default value.
+     * @return
+     */
+    public final static synchronized String getPreference(final String key, final String defaultValue) {
+        if (preferences == null) {
+            preferences = getContext().getSharedPreferences(getContext().getString(R.string.file_preferences), Context.MODE_PRIVATE);
+        }
+        return preferences.getString(key, defaultValue);
+    }
+
+    /**
+     * Set app preference.
+     *
+     * @param key   Value key.
+     * @param value Value.
+     */
+    public final static synchronized void setPreference(final String key, final String value) {
+        if (preferences == null) {
+            preferences = getContext().getSharedPreferences(getContext().getString(R.string.file_preferences), Context.MODE_PRIVATE);
+        }
+        final SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(key, value);
+        editor.commit();
+    }
+
+    /**
      * Get internal storage.
      *
      * @return
      */
-    public final static Storage getStorage() {
+    public final static synchronized Storage getStorage() {
         if (storage == null) {
             storage = new Storage();
         }
@@ -329,7 +359,7 @@ public class C19XApplication extends Application {
     /**
      * Schedule daily task to update global status log.
      */
-    private final static void startGlobalStatusLogAutomaticUpdate() {
+    public final static void startGlobalStatusLogAutomaticUpdate() {
         if (globalStatusLogUpdateTask == null) {
             // Randomised update time between 00:00 and 04:59
             final Random random = new Random();
@@ -350,7 +380,7 @@ public class C19XApplication extends Application {
     /**
      * Cancel daily task to update global status log.
      */
-    private final static void stopGlobalStatusLogAutomaticUpdate() {
+    public final static void stopGlobalStatusLogAutomaticUpdate() {
         if (globalStatusLogUpdateTask != null) {
             final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
             alarmManager.cancel(globalStatusLogUpdateTask);

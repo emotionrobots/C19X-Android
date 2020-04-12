@@ -1,6 +1,7 @@
 package org.c19x.data;
 
 import org.c19x.C19XApplication;
+import org.c19x.R;
 import org.c19x.network.NetworkClient;
 import org.c19x.network.response.NetworkResponse;
 import org.c19x.util.Logger;
@@ -8,7 +9,11 @@ import org.c19x.util.messaging.DefaultBroadcaster;
 import org.c19x.util.security.AliasIdentifier;
 import org.c19x.util.security.KeyExchange;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationListener> {
     private final static String tag = DeviceRegistration.class.getName();
@@ -19,6 +24,49 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
     private AliasIdentifier aliasIdentifier = null;
 
     public DeviceRegistration() {
+        load();
+    }
+
+    /**
+     * Load registration data from encrypted file on app internal storage
+     */
+    private boolean load() {
+        // Read from encrypted file
+        final String filename = C19XApplication.getContext().getString(R.string.file_registration);
+        return C19XApplication.getStorage().atomicRead(filename, byteArray -> {
+            final ByteBuffer byteBuffer = ByteBuffer.wrap(byteArray);
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            identifier = byteBuffer.getLong(0);
+            sharedSecret = new byte[byteArray.length - Long.BYTES];
+            System.arraycopy(byteBuffer.array(), Long.BYTES, sharedSecret, 0, sharedSecret.length);
+            sharedSecretKey = new SecretKeySpec(sharedSecret, 0, 16, "AES");
+            aliasIdentifier = new AliasIdentifier(sharedSecret);
+            Logger.info(tag, "Loaded device registration data from encrypted storage");
+        });
+    }
+
+    /**
+     * Write registration data to encrypted file on app internal storage,
+     *
+     * @return
+     */
+    private boolean write() {
+        // Encode registration data
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + sharedSecret.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.putLong(0, identifier);
+        byteBuffer.position(Long.BYTES);
+        byteBuffer.put(sharedSecret);
+
+        // Write to encrypted file
+        final String filename = C19XApplication.getContext().getString(R.string.file_registration);
+        final boolean success = C19XApplication.getStorage().atomicWrite(byteBuffer.array(), filename);
+        if (success) {
+            Logger.info(tag, "Wrote device registration data to encrypted storage");
+        } else {
+            Logger.warn(tag, "Failed to write device registration data to encrypted storage");
+        }
+        return success;
     }
 
     /**
@@ -89,6 +137,7 @@ public class DeviceRegistration extends DefaultBroadcaster<DeviceRegistrationLis
                                 sharedSecret = keyExchange.getSharedSecret();
                                 sharedSecretKey = keyExchange.getSharedSecretKey();
                                 aliasIdentifier = new AliasIdentifier(sharedSecret);
+                                write();
                                 broadcast(l -> l.registration(true, identifier));
                                 Logger.info(tag, "Device registration success (identifier={})", identifier);
                             } else {
