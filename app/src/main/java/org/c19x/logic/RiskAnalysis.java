@@ -3,6 +3,7 @@ package org.c19x.logic;
 import android.util.LongSparseArray;
 
 import org.c19x.C19XApplication;
+import org.c19x.data.DetectionEventLog;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.HealthStatus;
 import org.c19x.data.primitive.AtomicByte;
@@ -23,9 +24,8 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
      */
     public void updateAssessment() {
         final GlobalStatusLog globalStatusLog = C19XApplication.getGlobalStatusLog();
-        final LongSparseArray<MutableLong> closeContacts = C19XApplication.getDetectionEventLog().getContacts();
 
-        final RiskFactors riskFactors = getRiskFactors(globalStatusLog, closeContacts);
+        final RiskFactors riskFactors = getRiskFactors(globalStatusLog, C19XApplication.getDetectionEventLog());
         advice.set(getAdvice(globalStatusLog, riskFactors));
         contact.set(getContact(globalStatusLog, riskFactors));
 
@@ -46,14 +46,16 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
      * Compute risk factors based on global status log parameters and close contact data.
      *
      * @param globalStatusLog
-     * @param closeContacts
+     * @param detectionEventLog
      * @return Summary of risk factors for analysis.
      */
-    private final static RiskFactors getRiskFactors(final GlobalStatusLog globalStatusLog, final LongSparseArray<MutableLong> closeContacts) {
+    private final static RiskFactors getRiskFactors(final GlobalStatusLog globalStatusLog, final DetectionEventLog detectionEventLog) {
         final RiskFactors riskFactors = new RiskFactors();
         riskFactors.healthStatus = C19XApplication.getHealthStatus().getStatus();
         riskFactors.governmentAdvice = globalStatusLog.getGovernmentAdvice();
+        riskFactors.detectionDays = detectionEventLog.getDays();
 
+        final LongSparseArray<MutableLong> closeContacts = detectionEventLog.getContacts();
         for (int i = closeContacts.size(); i-- > 0; ) {
             final long beaconId = closeContacts.keyAt(i);
             final long duration = closeContacts.valueAt(i).value;
@@ -66,10 +68,6 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         }
         return riskFactors;
     }
-
-//    private final static long decodeBeaconId(final DeviceRegistration deviceRegistration, final long beaconId) {
-//        deviceRegistration.getSharedSecret()
-//    }
 
     /**
      * Compute close contact status based on global parameters and risk factors

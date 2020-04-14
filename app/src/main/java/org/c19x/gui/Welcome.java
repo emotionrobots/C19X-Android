@@ -38,6 +38,7 @@ public class Welcome extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        C19XApplication.registerOnCreate(this);
 
         ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_welcome);
@@ -69,6 +70,12 @@ public class Welcome extends Activity {
                 }
             });
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        C19XApplication.unregisterOnDestroy(this);
     }
 
     /**

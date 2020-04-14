@@ -1,5 +1,6 @@
 package org.c19x;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Application;
 import android.app.PendingIntent;
@@ -31,6 +32,7 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Application and singletons.
@@ -38,10 +40,12 @@ import java.util.TimerTask;
 public class C19XApplication extends Application {
     private final static String tag = C19XApplication.class.getName();
 
+    public final static boolean testMode = true;
+
     /**
      * Bluetooth beacon service Id
      */
-    public final static long bluetoothLeServiceId = 1234567890123456789l;
+    public final static long bluetoothLeServiceId = (testMode ? 1234567890123456789l : 928918273491243897l);
     /**
      * Anonymous ID range, set to range=2^N where range is close to a multiple of population size.
      */
@@ -55,10 +59,11 @@ public class C19XApplication extends Application {
 
     private static Application application;
     private static Context context;
+    private static ConcurrentLinkedQueue<Activity> activities = new ConcurrentLinkedQueue<>();
+
     private static SharedPreferences preferences;
     private static Storage storage;
     private static Timer timer;
-
     private static Timestamp timestamp;
     private static DeviceRegistration deviceRegistration;
     private static HealthStatus healthStatus;
@@ -78,24 +83,68 @@ public class C19XApplication extends Application {
         context = getApplicationContext();
         storage = getStorage();
         timer = getTimer();
-
         timestamp = getTimestamp();
         bluetoothStateMonitor = getBluetoothStateMonitor();
         riskAnalysis = getRiskAnalysis();
+        startGlobalStatusLogAutomaticUpdate();
+    }
+
+    @Override
+    public void onTerminate() {
+        Logger.info(tag, "Application terminating");
+        getBeaconReceiver().removeListener(getDetectionEventLog());
+        getDetectionEventLog().close();
+        getBluetoothStateMonitor().stop();
+        stopGlobalStatusLogAutomaticUpdate();
+        getTimer().cancel();
+        Logger.info(tag, "Application terminated");
+        super.onTerminate();
     }
 
     /**
-     * Close application gracefully.
+     * Register activity on create to reliably keep track of whether the application is still alive.
+     *
+     * @param activity
      */
-    public final static void close() {
-        Logger.info(tag, "Closing app gracefully");
-        getBluetoothStateMonitor().stop();
-        getBeaconReceiver().removeListener(getDetectionEventLog());
-        getDetectionEventLog().close();
-        stopGlobalStatusLogAutomaticUpdate();
-        getTimer().cancel();
-        Logger.info(tag, "App closed");
+    public static void registerOnCreate(final Activity activity) {
+        if (activities.isEmpty()) {
+            if (application != null) {
+                application.onCreate();
+            }
+        }
+        if (!activities.contains(activity)) {
+            activities.add(activity);
+            Logger.debug(tag, "Registered activity (activity={},activities={})", activity, activities);
+        }
     }
+
+    public static Activity getCurrentActivity() {
+        if (activities.isEmpty()) {
+            return null;
+        } else {
+            final Activity[] list = activities.toArray(new Activity[activities.size()]);
+            return list[list.length - 1];
+        }
+    }
+
+    /**
+     * Unregister activity on destroy to reliably keep track of whether the application is still alive.
+     *
+     * @param activity
+     */
+    public static void unregisterOnDestroy(final Activity activity) {
+        if (activities.contains(activity)) {
+            activities.remove(activity);
+            Logger.debug(tag, "Unregistered activity (activity={},activities={})", activity, activities);
+            if (activities.isEmpty()) {
+                Logger.debug(tag, "All activities have been destroyed, terminating application");
+                if (application != null) {
+                    application.onTerminate();
+                }
+            }
+        }
+    }
+
 
     /**
      * Get application context.
@@ -243,7 +292,7 @@ public class C19XApplication extends Application {
         if (beaconTransmitter == null) {
             beaconTransmitter = new BLETransmitter();
             /**
-             * Refresh beacon transmitter alias identifier every 40 minutes
+             * Refresh beacon transmitter alias identifier every 20 minutes
              */
             getTimer().scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -253,7 +302,7 @@ public class C19XApplication extends Application {
                         getBeaconTransmitter().setId(aliasIdentifier);
                     }
                 }
-            }, 0, 60000); //Math.round(getGlobalStatusLog().getExposureDurationThreshold() * 1.5 * 60 * 1000));
+            }, 0, (testMode ? 2 : 20) * 60 * 1000);
         }
         return beaconTransmitter;
     }
@@ -375,7 +424,7 @@ public class C19XApplication extends Application {
             globalStatusLogUpdateTask = PendingIntent.getBroadcast(getContext(), 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
             final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
 //            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, globalStatusLogUpdateTask);
-            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 2000, globalStatusLogUpdateTask);
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), (testMode ? 2000 : AlarmManager.INTERVAL_DAY), globalStatusLogUpdateTask);
         }
     }
 

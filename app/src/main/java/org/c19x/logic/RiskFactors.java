@@ -8,6 +8,7 @@ import org.c19x.data.HealthStatus;
 public final class RiskFactors {
     public byte healthStatus = HealthStatus.NO_SYMPTOM;
     public byte governmentAdvice = HealthStatus.STAY_AT_HOME;
+    public int detectionDays = 0;
     public long closeContactDuration = 0;
     public long closeContactWithInfectiousDuration = 0;
 
@@ -16,6 +17,7 @@ public final class RiskFactors {
         return "RiskFactors{" +
                 "healthStatus=" + healthStatus +
                 ", governmentAdvice=" + governmentAdvice +
+                ", detectionDays=" + detectionDays +
                 ", closeContactDuration=" + closeContactDuration +
                 ", closeContactWithInfectiousDuration=" + closeContactWithInfectiousDuration +
                 '}';

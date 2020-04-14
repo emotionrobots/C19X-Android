@@ -13,11 +13,11 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
 import org.c19x.beacon.BeaconListener;
-import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogListener;
 import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.data.HealthStatus;
@@ -33,6 +33,7 @@ import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
 public class MainActivity extends Activity {
     private final static String tag = MainActivity.class.getName();
     private final static int notificationChannelId = 1;
+    private String notificationText = null;
 
     // Bluetooth state listener used by startBeacon and stopBeacon
     private BluetoothStateMonitorListener bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
@@ -100,10 +101,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Logger.debug(tag, "Lifecycle : onCreate()");
         super.onCreate(savedInstanceState);
-
-        Logger.info(tag, "Starting main activity");
+        C19XApplication.registerOnCreate(this);
 
         // Setup app UI
         ActivityUtil.setFullscreen(this);
@@ -111,15 +110,33 @@ public class MainActivity extends Activity {
         setDefaultState();
 
         // Start monitoring bluetooth state
-        startBluetoothStateMonitor();
+        registerBluetoothBeaconListeners();
 
-        // Display risk analysis results
+        // Start monitoring risk analysis results
         C19XApplication.getRiskAnalysis().addListener(riskAnalysisListener);
+        C19XApplication.getRiskAnalysis().updateAssessment();
 
-        // Display global status log version update
-        final GlobalStatusLog globalStatusLog = C19XApplication.getGlobalStatusLog();
-        globalStatusLog.addListener(globalStatusLogListener);
-        C19XApplication.startGlobalStatusLogAutomaticUpdate();
+        // Start monitoring global status log version update
+        C19XApplication.getGlobalStatusLog().addListener(globalStatusLogListener);
+
+        setNotification(getString(R.string.app_notification));
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Stop monitoring global status log version update
+        C19XApplication.getGlobalStatusLog().removeListener(globalStatusLogListener);
+
+        // Stop monitoring risk analysis results
+        C19XApplication.getRiskAnalysis().removeListener(riskAnalysisListener);
+
+        // Stop monitoring bluetooth state
+        unregisterBluetoothBeaconListeners();
+
+        setNotification(null);
+
+        C19XApplication.unregisterOnDestroy(this);
+        super.onDestroy();
     }
 
     @Override
@@ -130,43 +147,12 @@ public class MainActivity extends Activity {
         startActivity(startMain);
     }
 
-    @Override
-    protected void onStart() {
-        Logger.debug(tag, "Lifecycle : onStart()");
-        super.onStart();
-    }
-
-    @Override
-    protected void onStop() {
-        Logger.debug(tag, "Lifecycle : onStop()");
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        Logger.debug(tag, "Lifecycle : onDestroy()");
-        // Stop beacon
-        stopBeacon();
-
-        // Stop display global status log version update
-        final GlobalStatusLog globalStatusLog = C19XApplication.getGlobalStatusLog();
-        globalStatusLog.removeListener(globalStatusLogListener);
-
-        // Stop display risk analysis results
-        C19XApplication.getRiskAnalysis().removeListener(riskAnalysisListener);
-
-        C19XApplication.close();
-
-        Logger.info(tag, "Stopped main activity");
-        super.onDestroy();
-    }
-
     // BEACON ======================================================================================
 
     /**
      * Start beacon transmitter and receiver, and register this activity as listener
      */
-    private final void startBluetoothStateMonitor() {
+    private final void registerBluetoothBeaconListeners() {
         this.beaconListener = new BeaconListener() {
             @Override
             public void start() {
@@ -215,13 +201,11 @@ public class MainActivity extends Activity {
     /**
      * Stop beacon transmitter and receiver, and unregister this activity as listener
      */
-    private final void stopBeacon() {
+    private final void unregisterBluetoothBeaconListeners() {
         if (beaconListener == null) {
-            Logger.warn(tag, "Ignored call to stopBeacon(), as beacon already stopped");
             return;
         }
         C19XApplication.getBluetoothStateMonitor().removeListener(bluetoothStateMonitorListener);
-        bluetoothStateMonitorListener.disabling();
         C19XApplication.getBeaconTransmitter().removeListener(beaconListener);
         C19XApplication.getBeaconReceiver().removeListener(beaconListener);
 
@@ -271,7 +255,8 @@ public class MainActivity extends Activity {
      * @param view
      */
     public void updateData(View view) {
-        Logger.debug(tag, "Global status log update requested manually");
+        Logger.debug(tag, "Global status log update and detection event log backup requested manually");
+        C19XApplication.getDetectionEventLog().backupToFile();
         new GlobalStatusLogReceiver().onReceive(null, null);
     }
 
@@ -421,6 +406,7 @@ public class MainActivity extends Activity {
             case HealthStatus.INFECTIOUS: {
                 option.setText(R.string.contact_status_option_infectious);
                 option.setBackgroundResource(R.color.colorRed);
+                setNotification(getString(R.string.contact_status_option_infectious_notification));
                 break;
             }
         }
@@ -447,13 +433,14 @@ public class MainActivity extends Activity {
             case HealthStatus.SELF_ISOLATION: {
                 option.setText(R.string.advice_status_option_self_isolation);
                 option.setBackgroundResource(R.color.colorRed);
+                setNotification(getString(R.string.advice_status_option_self_isolation_notification));
                 break;
             }
         }
     }
 
     /**
-     * Set contact duration
+     * Set contact duration per day
      *
      * @param riskFactors
      */
@@ -461,34 +448,23 @@ public class MainActivity extends Activity {
         final TextView textView = (TextView) findViewById(R.id.contactDuration);
         final long contactDurationThreshold = C19XApplication.getGlobalStatusLog().getContactDurationThreshold();
         final long exposureDurationThreshold = C19XApplication.getGlobalStatusLog().getExposureDurationThreshold();
-        final long minutes = riskFactors.closeContactDuration / 60000;
-        if (minutes <= 1) {
+        final long minutes = (riskFactors.closeContactDuration / riskFactors.detectionDays) / 60000;
+
+        if (minutes < 2) {
             textView.setText(R.string.status_contact_none);
-        } else if (minutes <= 5) {
-            textView.setText(R.string.status_contact_5);
-        } else if (minutes <= 10) {
-            textView.setText(R.string.status_contact_10);
-        } else if (minutes <= 30) {
-            textView.setText(R.string.status_contact_30);
-        } else if (minutes <= 120) {
-            textView.setText(R.string.status_contact_1h);
+        } else if (minutes < 10) {
+            textView.setText((minutes / 2) * 2 + " minutes");
+        } else if (minutes < 60) {
+            textView.setText((minutes / 10) * 10 + " minutes");
         } else {
-            final long hours = minutes / 60;
-            if (hours <= 48) {
-                textView.setText(hours + " hours");
-            } else {
-                final long days = hours / 24;
-                textView.setText(days + " days");
-            }
+            final int hours = (int) (minutes / 60);
+            textView.setText(hours + " hour" + (hours == 1 ? "" : "s"));
         }
 
-        if (riskFactors.closeContactDuration < contactDurationThreshold) {
-            textView.setText(R.string.status_contact_none);
-            textView.setBackgroundResource(R.color.colorGreen);
-        } else if (riskFactors.closeContactDuration < exposureDurationThreshold) {
+        if (riskFactors.closeContactDuration >= exposureDurationThreshold) {
             textView.setBackgroundResource(R.color.colorAmber);
         } else {
-            textView.setBackgroundResource(R.color.colorRed);
+            textView.setBackgroundResource(R.color.colorGreen);
         }
     }
 
@@ -565,46 +541,39 @@ public class MainActivity extends Activity {
         newsFeed.setSelected(true);
     }
 
-    private final void createNotification() {
+    /**
+     * Create notification
+     */
+    private final void setNotification(final String text) {
         final String channelId = getString(R.string.app_fullname);
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(channelId, channelId, importance);
-            channel.setDescription("Notification for " + channelId);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
+        if (text != null) {
+            if (!text.equals(notificationText)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    int importance = NotificationManager.IMPORTANCE_DEFAULT;
+                    NotificationChannel channel = new NotificationChannel(channelId, channelId, importance);
+                    channel.setDescription("Notification for " + channelId);
+                    NotificationManager notificationManager = getSystemService(NotificationManager.class);
+                    notificationManager.createNotificationChannel(channel);
+                }
+
+                final Intent intent = new Intent(this, MainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                final PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+                final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
+                        .setSmallIcon(R.drawable.virus)
+                        .setContentTitle(channelId)
+                        .setContentText(text)
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+                notificationManager.notify(channelId.hashCode(), builder.build());
+            }
+        } else {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            notificationManager.deleteNotificationChannel(channelId);
         }
-
-        Intent intent = new Intent(this, Welcome.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(R.drawable.virus)
-                .setContentTitle(channelId)
-                .setContentText("Hello")
-                .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-
     }
 
-
-
-//    /**
-//     * Make this application a foreground application with an active notification. This is necessary to get round request limits.
-//     *
-//     * @return
-//     */
-//    private final Notification getNotification() {
-//        NotificationChannel channel = new NotificationChannel("c19xChannel1", "C19X Channel", NotificationManager.IMPORTANCE_DEFAULT);
-//        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-//        notificationManager.createNotificationChannel(channel);
-//        Notification.Builder builder = new Notification.Builder(C19XApplication.getContext(), "c19xChannel1").setAutoCancel(true);
-//        return builder.build();
-//    }
-//
 }

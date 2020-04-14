@@ -7,7 +7,6 @@ import org.c19x.beacon.BeaconListener;
 import org.c19x.data.primitive.MutableLong;
 import org.c19x.util.Logger;
 
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -52,8 +51,7 @@ public class DetectionEventLog extends BeaconListener {
     private final Lock logLock = new ReentrantLock(true);
 
     // Backup log once every 20 minutes
-    private final static long automaticLogBackupTaskScheduleMillis = 1 * 60 * 1000;
-    private final Timer timer = new Timer(true);
+    private final static long automaticLogBackupTaskScheduleMillis = (C19XApplication.testMode ? 10000 : 20 * 60 * 1000);
     private TimerTask complyWithRetentionPeriodTask = null;
 
 
@@ -63,7 +61,7 @@ public class DetectionEventLog extends BeaconListener {
         // Start rolling log automatic deletion process
         setRetentionPeriod(retentionPeriodDays);
         // Start rolling log automatic backup process
-        timer.scheduleAtFixedRate(new TimerTask() {
+        C19XApplication.getTimer().scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 new Thread(() -> backupToFile()).start();
@@ -95,15 +93,19 @@ public class DetectionEventLog extends BeaconListener {
                 dailyEncounterCsv.append('\n');
                 final LongSparseArray<MutableLong> dayEncounterLog = dailyEncounterLog.valueAt(i);
                 for (int j = 0; j < dayEncounterLog.size(); j++) {
-                    dailyEncounterCsv.append(dayEncounterLog.keyAt(i));
+                    dailyEncounterCsv.append(dayEncounterLog.keyAt(j));
                     dailyEncounterCsv.append(',');
-                    dailyEncounterCsv.append(dayEncounterLog.valueAt(i).value);
+                    dailyEncounterCsv.append(dayEncounterLog.valueAt(j).value);
                     dailyEncounterCsv.append('\n');
                 }
             }
             // Write logs to storage
-            result = result && C19XApplication.getStorage().atomicWriteText(lastTimestampCsv.toString(), lastTimestampFile);
-            result = result && C19XApplication.getStorage().atomicWriteText(dailyEncounterCsv.toString(), dailyEncounterFile);
+            if (!C19XApplication.getStorage().atomicWriteText(lastTimestampCsv.toString(), lastTimestampFile)) {
+                result = false;
+            }
+            if (!C19XApplication.getStorage().atomicWriteText(dailyEncounterCsv.toString(), dailyEncounterFile)) {
+                result = false;
+            }
             Logger.info(tag, "Backup detection event log successful");
         } catch (Throwable e) {
             Logger.warn(tag, "Backup failed", e);
@@ -124,7 +126,7 @@ public class DetectionEventLog extends BeaconListener {
         try {
             // Read last timestamp log from storage
             final LongSparseArray<MutableLong> newLastTimestampLog = new LongSparseArray<>();
-            result = result && C19XApplication.getStorage().atomicReadText(lastTimestampFile, line -> {
+            if (!C19XApplication.getStorage().atomicReadText(lastTimestampFile, line -> {
                 try {
                     final int separator = line.indexOf(',');
                     if (separator != -1) {
@@ -135,11 +137,13 @@ public class DetectionEventLog extends BeaconListener {
                 } catch (Throwable e) {
                     Logger.warn(tag, "Failed to parse line (file={},line={})", lastTimestampFile, line, e);
                 }
-            });
+            })) {
+                result = false;
+            }
 
             // Read daily encounter log from storage
             final LongSparseArray<LongSparseArray<MutableLong>> newDailyEncounterLog = new LongSparseArray<>();
-            result = result && C19XApplication.getStorage().atomicReadText(dailyEncounterFile, new Consumer<String>() {
+            if (!C19XApplication.getStorage().atomicReadText(dailyEncounterFile, new Consumer<String>() {
                 private LongSparseArray<MutableLong> dayEncounterLog = null;
 
                 @Override
@@ -168,7 +172,9 @@ public class DetectionEventLog extends BeaconListener {
                         Logger.warn(tag, "Failed to parse line (file={},line={})", dailyEncounterFile, line, e);
                     }
                 }
-            });
+            })) {
+                result = false;
+            }
 
             // Replace logs with restored data
             lastTimestampLog.clear();
@@ -261,6 +267,23 @@ public class DetectionEventLog extends BeaconListener {
     }
 
     /**
+     * Get total number of days covered by the detection log
+     *
+     * @return
+     */
+    public int getDays() {
+        final long today = (C19XApplication.getTimestamp().getTime() / millisPerDay) * millisPerDay;
+        long deltaMax = 0;
+        for (int i = dailyEncounterLog.size(); i-- > 0; ) {
+            final long delta = today - dailyEncounterLog.keyAt(i);
+            if (delta > deltaMax) {
+                deltaMax = delta;
+            }
+        }
+        return (int) (deltaMax / millisPerDay) + 1;
+    }
+
+    /**
      * Get total duration of close contacts over log period.
      *
      * @return Map of device identifier and total close contact duration in milliseconds
@@ -306,7 +329,7 @@ public class DetectionEventLog extends BeaconListener {
             }
         };
         this.retentionPeriodDays = retentionPeriodDays;
-        timer.scheduleAtFixedRate(complyWithRetentionPeriodTask, 0, millisPerHour);
+        C19XApplication.getTimer().scheduleAtFixedRate(complyWithRetentionPeriodTask, 0, millisPerHour);
         Logger.debug(tag, "Set retention period (days={})", retentionPeriodDays);
     }
 
