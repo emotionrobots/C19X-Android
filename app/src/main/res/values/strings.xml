@@ -16,7 +16,7 @@
     <string name="health_status_title">How are you today?</string>
     <string name="health_status_option_no_symptom">I do not have a high temperature or a new continuous cough</string>
     <string name="health_status_option_has_symptom">I have a high temperature and/or a new continuous cough</string>
-    <string name="health_status_option_confirmed_diagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19) by the NHS</string>
+    <string name="health_status_option_confirmed_diagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19)</string>
     <string name="health_status_dialog_title">Submit update</string>
     <string name="health_status_dialog_description">Share your status anonymously to help people who has been in close proximity in recent days? No personal information or location data is ever collected or shared.</string>
     <string name="health_status_dialog_submit_success">Status has been shared anonymously. Thank you for helping people who has been in close proximity in recent days.</string>
@@ -45,10 +45,10 @@
     <string name="status_beacon_off">Detection off</string>
     <string name="status_beacon_receiver">Receive only</string>
     <string name="status_beacon_transmitter">Transmit only</string>
-    <string name="status_beacon_on">Detection active</string>
+    <string name="status_beacon_on">Scanning</string>
 
-    <string name="status_contact_none">No close contact</string>
-    <string name="status_data_update_latest">Latest infection data</string>
+    <string name="status_contact_none">No contact</string>
+    <string name="status_data_update_latest">Latest data</string>
     <string name="status_data_update_download">Queuing for download</string>
 
     <string name="ok">OK</string>

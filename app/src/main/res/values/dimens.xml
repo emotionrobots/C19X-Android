@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="textExtraLarge">36sp</dimen>
+    <dimen name="textExtraLarge">32sp</dimen>
     <dimen name="textLarge">26sp</dimen>
     <dimen name="textMedium">20sp</dimen>
     <dimen name="textSmall">12sp</dimen>
