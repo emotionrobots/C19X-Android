@@ -11,7 +11,7 @@ public class Logger {
     private final static short ERROR = 3;
     private static short level = DEBUG;
 
-    private static PrintStream stream = System.out;
+    private static PrintStream stream = null;
 
 
     public final static void debug(final String tag, final String message, final Object... values) {

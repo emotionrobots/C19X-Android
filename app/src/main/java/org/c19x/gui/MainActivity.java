@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -20,6 +21,7 @@ import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogListener;
 import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.data.HealthStatus;
+import org.c19x.data.PersonalMessage;
 import org.c19x.logic.RiskAnalysisListener;
 import org.c19x.logic.RiskFactors;
 import org.c19x.util.Logger;
@@ -92,11 +94,13 @@ public class MainActivity extends Activity {
             setContactStatus(contact);
             setAdviceStatus(advice);
             setContactDuration(riskFactors);
+            setNewsFeedBasedOnRiskAnalysis();
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Logger.debug(tag, "Lifecycle : onCreate()");
         super.onCreate(savedInstanceState);
 
         Logger.info(tag, "Starting main activity");
@@ -119,9 +123,28 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    public void onBackPressed() {
+        final Intent startMain = new Intent(Intent.ACTION_MAIN);
+        startMain.addCategory(Intent.CATEGORY_HOME);
+        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(startMain);
+    }
 
+    @Override
+    protected void onStart() {
+        Logger.debug(tag, "Lifecycle : onStart()");
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        Logger.debug(tag, "Lifecycle : onStop()");
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Logger.debug(tag, "Lifecycle : onDestroy()");
         // Stop beacon
         stopBeacon();
 
@@ -132,7 +155,10 @@ public class MainActivity extends Activity {
         // Stop display risk analysis results
         C19XApplication.getRiskAnalysis().removeListener(riskAnalysisListener);
 
+        C19XApplication.close();
+
         Logger.info(tag, "Stopped main activity");
+        super.onDestroy();
     }
 
     // BEACON ======================================================================================
@@ -212,6 +238,7 @@ public class MainActivity extends Activity {
         setHealthStatus(C19XApplication.getHealthStatus().getStatus());
         setContactStatus(C19XApplication.getRiskAnalysis().getContact());
         setAdviceStatus(C19XApplication.getRiskAnalysis().getAdvice());
+        setNewsFeedBasedOnRiskAnalysis();
     }
 
     /**
@@ -262,14 +289,25 @@ public class MainActivity extends Activity {
     }
 
     public void onClickAdviceStatus(View view) {
+        final boolean infectedContacts = C19XApplication.getRiskAnalysis().getContact() == HealthStatus.INFECTIOUS;
         switch (C19XApplication.getRiskAnalysis().getAdvice()) {
             case HealthStatus.NO_RESTRICTION:
-                ActivityUtil.showDialog(this, R.string.advice_status_option_no_restriction, R.string.advice_status_option_no_restriction_description, () -> {
-                }, null);
+                ActivityUtil.showDialog(this,
+                        R.string.advice_status_option_no_restriction,
+                        (infectedContacts ?
+                                R.string.advice_status_option_no_restriction_description_infected_contacts :
+                                R.string.advice_status_option_no_restriction_description),
+                        () -> {
+                        }, null);
                 break;
             case HealthStatus.STAY_AT_HOME:
-                ActivityUtil.showDialog(this, R.string.advice_status_option_stay_at_home, R.string.advice_status_option_stay_at_home_description, () -> {
-                }, null);
+                ActivityUtil.showDialog(this,
+                        R.string.advice_status_option_stay_at_home,
+                        (infectedContacts ?
+                                R.string.advice_status_option_stay_at_home_description_infected_contacts :
+                                R.string.advice_status_option_stay_at_home_description),
+                        () -> {
+                        }, null);
                 break;
             case HealthStatus.SELF_ISOLATION:
                 ActivityUtil.showDialog(this, R.string.advice_status_option_self_isolation, R.string.advice_status_option_self_isolation_description, () -> {
@@ -374,18 +412,15 @@ public class MainActivity extends Activity {
      */
     private void setContactStatus(final byte status) {
         final TextView option = (TextView) findViewById(R.id.contactStatusOption);
-        final TextView description = (TextView) findViewById(R.id.contactStatusOptionDescription);
         switch (status) {
             case HealthStatus.NO_REPORT: {
                 option.setText(R.string.contact_status_option_no_report);
                 option.setBackgroundResource(R.color.colorGreen);
-                description.setText(R.string.contact_status_option_no_report_description);
                 break;
             }
             case HealthStatus.INFECTIOUS: {
                 option.setText(R.string.contact_status_option_infectious);
                 option.setBackgroundResource(R.color.colorRed);
-                description.setText(R.string.contact_status_option_infectious_description);
                 break;
             }
         }
@@ -398,24 +433,20 @@ public class MainActivity extends Activity {
      */
     private void setAdviceStatus(final byte status) {
         final TextView option = (TextView) findViewById(R.id.adviceOption);
-        final TextView description = (TextView) findViewById(R.id.adviceOptionDescription);
         switch (status) {
             case HealthStatus.NO_RESTRICTION: {
                 option.setText(R.string.advice_status_option_no_restriction);
                 option.setBackgroundResource(R.color.colorGreen);
-                description.setText(R.string.advice_status_option_no_restriction_description);
                 break;
             }
             case HealthStatus.STAY_AT_HOME: {
                 option.setText(R.string.advice_status_option_stay_at_home);
                 option.setBackgroundResource(R.color.colorAmber);
-                description.setText(R.string.advice_status_option_stay_at_home_description);
                 break;
             }
             case HealthStatus.SELF_ISOLATION: {
                 option.setText(R.string.advice_status_option_self_isolation);
                 option.setBackgroundResource(R.color.colorRed);
-                description.setText(R.string.advice_status_option_self_isolation_description);
                 break;
             }
         }
@@ -461,6 +492,78 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void setNewsFeedBasedOnRiskAnalysis() {
+        int color = R.color.colorDarkGrey;
+        final StringBuilder s = new StringBuilder();
+//        switch (C19XApplication.getRiskAnalysis().getContact()) {
+//            case HealthStatus.NO_REPORT: {
+//                s.append(getString(R.string.contact_status_option_no_report));
+//                s.append(" : ");
+//                s.append(getString(R.string.contact_status_option_no_report_description));
+//                break;
+//            }
+//            case HealthStatus.INFECTIOUS: {
+//                s.append(getString(R.string.contact_status_option_infectious));
+//                s.append(" : ");
+//                s.append(getString(R.string.contact_status_option_infectious_description));
+//                break;
+//            }
+//        }
+//        s.append(" | ");
+        final boolean infectionRisk = (C19XApplication.getRiskAnalysis().getContact() != HealthStatus.NO_REPORT);
+        switch (C19XApplication.getRiskAnalysis().getAdvice()) {
+            case HealthStatus.NO_RESTRICTION: {
+                s.append(getString(R.string.advice_status_option_no_restriction));
+                s.append(" : ");
+                s.append(getString(
+                        infectionRisk ?
+                                R.string.advice_status_option_no_restriction_description_infected_contacts :
+                                R.string.advice_status_option_no_restriction_description));
+                // color = R.color.colorGreen;
+                break;
+            }
+            case HealthStatus.STAY_AT_HOME: {
+                s.append(getString(R.string.advice_status_option_stay_at_home));
+                s.append(" : ");
+                s.append(getString(
+                        infectionRisk ?
+                                R.string.advice_status_option_stay_at_home_description_infected_contacts :
+                                R.string.advice_status_option_stay_at_home_description));
+                // color = R.color.colorAmber;
+                break;
+            }
+            case HealthStatus.SELF_ISOLATION: {
+                s.append(getString(R.string.advice_status_option_self_isolation));
+                s.append(" : ");
+                s.append(getString(R.string.advice_status_option_self_isolation_description));
+                // color = R.color.colorRed;
+                break;
+            }
+        }
+        setPersonalMessage(new PersonalMessage(s.toString(), color, null));
+    }
+
+    /**
+     * Set scrolling news feed text.
+     *
+     * @param personalMessage
+     */
+    private void setPersonalMessage(PersonalMessage personalMessage) {
+        final TextView newsFeed = (TextView) findViewById(R.id.personalMessage);
+        newsFeed.setText(personalMessage.getText());
+        newsFeed.setTextColor(getResources().getColor(personalMessage.getColor(), null));
+
+        if (personalMessage.getUrl() != null) {
+            newsFeed.setOnClickListener(v -> {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW);
+                browserIntent.setData(Uri.parse(personalMessage.getUrl()));
+                startActivity(browserIntent);
+            });
+        } else {
+            newsFeed.setOnClickListener(null);
+        }
+        newsFeed.setSelected(true);
+    }
 
     private final void createNotification() {
         final String channelId = getString(R.string.app_fullname);

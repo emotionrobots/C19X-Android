@@ -94,7 +94,9 @@ public class Welcome extends Activity {
     private final synchronized void checkProgress() {
         Logger.debug(tag, "Progress (registration={},bluetooth={},data={},locationPermission={},bluetoothPermission={})", deviceRegistrationComplete, bluetoothBeaconComplete, dataDownloadComplete, locationPermissionComplete, bluetoothPermissionComplete);
         if (deviceRegistrationComplete.get() && bluetoothBeaconComplete.get() && dataDownloadComplete.get() && locationPermissionComplete.get() && bluetoothPermissionComplete.get()) {
-            startActivity(new Intent(this, MainActivity.class));
+            final Intent intent = new Intent(this, MainActivity.class);
+            // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
         }
     }
 

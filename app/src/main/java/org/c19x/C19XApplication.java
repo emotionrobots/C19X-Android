@@ -84,15 +84,17 @@ public class C19XApplication extends Application {
         riskAnalysis = getRiskAnalysis();
     }
 
-    @Override
-    public void onTerminate() {
-        super.onTerminate();
-
+    /**
+     * Close application gracefully.
+     */
+    public final static void close() {
+        Logger.info(tag, "Closing app gracefully");
         getBluetoothStateMonitor().stop();
         getBeaconReceiver().removeListener(getDetectionEventLog());
         getDetectionEventLog().close();
         stopGlobalStatusLogAutomaticUpdate();
         getTimer().cancel();
+        Logger.info(tag, "App closed");
     }
 
     /**

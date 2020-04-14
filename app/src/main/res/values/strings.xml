@@ -30,12 +30,13 @@
 
     <string name="adviceTitle">What you need to do</string>
     <string name="advice_status_option_no_restriction">No restriction</string>
-    <string name="advice_status_option_no_restriction_description">COVID-19 is now under control, you can safely return to your normal activities</string>
+    <string name="advice_status_option_no_restriction_description">COVID-19 is now under control, you can safely return to your normal activities.</string>
+    <string name="advice_status_option_no_restriction_description_infected_contacts">COVID-19 is now under control, you can safely return to your normal activities. Although your recent contacts may be infectious, you are unlikely to be infected from the brief encounters.</string>
     <string name="advice_status_option_stay_at_home">Stay at home</string>
-    <string name="advice_status_option_stay_at_home_description">Everyone must stay at home to help stop the spread of COVID-19</string>
+    <string name="advice_status_option_stay_at_home_description">Everyone must stay at home to help stop the spread of COVID-19.</string>
+    <string name="advice_status_option_stay_at_home_description_infected_contacts">Everyone must stay at home to help stop the spread of COVID-19. Although your recent contacts may be infectious, you are unlikely to be infected from the brief encounters.</string>
     <string name="advice_status_option_self_isolation">Self-isolation</string>
-    <string name="advice_status_option_self_isolation_description">Do not leave your home if you have symptoms of COVID-19 or been in prolonged close contact with someone who does</string>
-
+    <string name="advice_status_option_self_isolation_description">Do not leave your home if you have symptoms or confirmed diagnosis of COVID-19 or been in prolonged close contact with someone who does.</string>
     <string name="status_beacon_off">Detection off</string>
     <string name="status_beacon_receiver">Receive only</string>
     <string name="status_beacon_transmitter">Transmit only</string>

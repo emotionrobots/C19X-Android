@@ -51,8 +51,8 @@ public class DetectionEventLog extends BeaconListener {
     private final LongSparseArray<LongSparseArray<MutableLong>> dailyEncounterLog = new LongSparseArray<>();
     private final Lock logLock = new ReentrantLock(true);
 
-    // Backup log once every hour
-    private final static long automaticLogBackupTaskScheduleMillis = 60 * 60 * 1000;
+    // Backup log once every 20 minutes
+    private final static long automaticLogBackupTaskScheduleMillis = 1 * 60 * 1000;
     private final Timer timer = new Timer(true);
     private TimerTask complyWithRetentionPeriodTask = null;
 
@@ -104,6 +104,7 @@ public class DetectionEventLog extends BeaconListener {
             // Write logs to storage
             result = result && C19XApplication.getStorage().atomicWriteText(lastTimestampCsv.toString(), lastTimestampFile);
             result = result && C19XApplication.getStorage().atomicWriteText(dailyEncounterCsv.toString(), dailyEncounterFile);
+            Logger.info(tag, "Backup detection event log successful");
         } catch (Throwable e) {
             Logger.warn(tag, "Backup failed", e);
         } finally {
@@ -178,6 +179,7 @@ public class DetectionEventLog extends BeaconListener {
             for (int i = 0; i < newDailyEncounterLog.size(); i++) {
                 dailyEncounterLog.put(newDailyEncounterLog.keyAt(i), newDailyEncounterLog.valueAt(i));
             }
+            Logger.info(tag, "Restore detection event log successful");
         } catch (Throwable e) {
             Logger.warn(tag, "Restore failed", e);
             result = false;
