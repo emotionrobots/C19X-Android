@@ -5,6 +5,7 @@ import android.util.LongSparseArray;
 import org.c19x.C19XApplication;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.HealthStatus;
+import org.c19x.data.primitive.AtomicByte;
 import org.c19x.data.primitive.MutableLong;
 import org.c19x.util.Logger;
 import org.c19x.util.messaging.DefaultBroadcaster;
@@ -14,27 +15,8 @@ import org.c19x.util.messaging.DefaultBroadcaster;
  */
 public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
     private final static String tag = RiskAnalysis.class.getName();
-
-    /**
-     * Risk factors for consideration in making a recommendation.
-     */
-    private final static class RiskFactors {
-        public byte healthStatus = HealthStatus.NO_SYMPTOM;
-        public byte governmentAdvice = HealthStatus.STAY_AT_HOME;
-        public long closeContactDuration = 0;
-        public long closeContactWithInfectiousDuration = 0;
-
-        @Override
-        public String toString() {
-            return "RiskFactors{" +
-                    "healthStatus=" + healthStatus +
-                    ", governmentAdvice=" + governmentAdvice +
-                    ", closeContactDuration=" + closeContactDuration +
-                    ", closeContactWithInfectiousDuration=" + closeContactWithInfectiousDuration +
-                    '}';
-        }
-    }
-
+    private final AtomicByte contact = new AtomicByte(HealthStatus.NO_REPORT);
+    private final AtomicByte advice = new AtomicByte(C19XApplication.getGlobalStatusLog().getGovernmentAdvice());
 
     /**
      * Update risk assessment and recommendation according to latest information.
@@ -44,12 +26,20 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         final LongSparseArray<MutableLong> closeContacts = C19XApplication.getDetectionEventLog().getContacts();
 
         final RiskFactors riskFactors = getRiskFactors(globalStatusLog, closeContacts);
-        final byte advice = getAdvice(globalStatusLog, riskFactors);
-        final byte contact = getContact(globalStatusLog, riskFactors);
+        advice.set(getAdvice(globalStatusLog, riskFactors));
+        contact.set(getContact(globalStatusLog, riskFactors));
 
-        Logger.info(tag, "Risk analysis (contact={}({}),advice={}({}),riskFactors={})", HealthStatus.toString(contact), contact, HealthStatus.toString(advice), advice, riskFactors);
+        Logger.info(tag, "Risk analysis (contact={}({}),advice={}({}),riskFactors={})", HealthStatus.toString(contact.get()), contact, HealthStatus.toString(advice.get()), advice, riskFactors);
 
-        broadcast(l -> l.update(contact, advice));
+        broadcast(l -> l.update(riskFactors, contact.get(), advice.get()));
+    }
+
+    public byte getContact() {
+        return contact.get();
+    }
+
+    public byte getAdvice() {
+        return advice.get();
     }
 
     /**

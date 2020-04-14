@@ -18,15 +18,12 @@ import org.c19x.R;
 import org.c19x.beacon.BeaconListener;
 import org.c19x.data.GlobalStatusLog;
 import org.c19x.data.GlobalStatusLogListener;
+import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.data.HealthStatus;
 import org.c19x.logic.RiskAnalysisListener;
+import org.c19x.logic.RiskFactors;
 import org.c19x.util.Logger;
 import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
 
 /**
  * Minimalist app user interface for simplicity and usability
@@ -62,20 +59,26 @@ public class MainActivity extends Activity {
      * Global status log listener for updating the status text on the GUI
      */
     private final GlobalStatusLogListener globalStatusLogListener = new GlobalStatusLogListener() {
-        private final DateFormat dateFormat = new SimpleDateFormat("YYYYMMdd.HHmm");
+        private final long dayMillis = 24 * 60 * 60 * 1000;
 
         @Override
         public void updated(final long fromVersion, final long toVersion) {
-            final TextView textView = (TextView) findViewById(R.id.dataVersion);
-            if (toVersion == 0) {
-                textView.setText(R.string.dataVersionDownloading);
+            final TextView textView = (TextView) findViewById(R.id.dataUpdate);
+            final long currentTime = C19XApplication.getTimestamp().getTime();
+            final long delta = (currentTime - toVersion) / dayMillis;
+            Logger.debug(tag, "Global status log updated (time={},toVersion={},delta={})", currentTime, toVersion, delta);
+            if (delta >= C19XApplication.getGlobalStatusLog().getRetentionPeriod()) {
+                textView.setText(R.string.status_data_update_download);
                 textView.setBackgroundResource(R.color.colorRed);
-            } else {
-                final Date date = new Date(toVersion);
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-                final String version = dateFormat.format(date);
-                textView.setText(version);
+            } else if (delta == 0) {
+                textView.setText(R.string.status_data_update_latest);
                 textView.setBackgroundResource(R.color.colorGreen);
+            } else if (delta == 1) {
+                textView.setText("Updated 1 day ago");
+                textView.setBackgroundResource(R.color.colorAmber);
+            } else {
+                textView.setText("Updated " + delta + " day ago");
+                textView.setBackgroundResource(R.color.colorAmber);
             }
         }
     };
@@ -85,9 +88,10 @@ public class MainActivity extends Activity {
      */
     private final RiskAnalysisListener riskAnalysisListener = new RiskAnalysisListener() {
         @Override
-        public void update(final byte contact, final byte advice) {
+        public void update(final RiskFactors riskFactors, final byte contact, final byte advice) {
             setContactStatus(contact);
             setAdviceStatus(advice);
+            setContactDuration(riskFactors);
         }
     };
 
@@ -161,18 +165,18 @@ public class MainActivity extends Activity {
                 final boolean receiver = C19XApplication.getBeaconReceiver().isStarted();
                 Logger.debug(tag, "Beacon status update (transmitter={},receiver={})", transmitter, receiver);
 
-                final TextView textView = (TextView) findViewById(R.id.protectionStatus);
+                final TextView textView = (TextView) findViewById(R.id.beaconStatus);
                 if (!transmitter && !receiver) {
-                    textView.setText(R.string.statusProtectionOptionNone);
+                    textView.setText(R.string.status_beacon_off);
                     textView.setBackgroundResource(R.color.colorRed);
                 } else if (transmitter && !receiver) {
-                    textView.setText(R.string.statusProtectionOptionOthersOnly);
+                    textView.setText(R.string.status_beacon_transmitter);
                     textView.setBackgroundResource(R.color.colorAmber);
                 } else if (!transmitter && receiver) {
-                    textView.setText(R.string.statusProtectionOptionSelfOnly);
+                    textView.setText(R.string.status_beacon_receiver);
                     textView.setBackgroundResource(R.color.colorAmber);
                 } else {
-                    textView.setText(R.string.statusProtectionOptionCommunity);
+                    textView.setText(R.string.status_beacon_on);
                     textView.setBackgroundResource(R.color.colorGreen);
                 }
             }
@@ -206,8 +210,72 @@ public class MainActivity extends Activity {
      */
     private final void setDefaultState() {
         setHealthStatus(C19XApplication.getHealthStatus().getStatus());
-        setContactStatus(HealthStatus.NO_SYMPTOM);
-        setAdviceStatus(HealthStatus.STAY_AT_HOME);
+        setContactStatus(C19XApplication.getRiskAnalysis().getContact());
+        setAdviceStatus(C19XApplication.getRiskAnalysis().getAdvice());
+    }
+
+    /**
+     * Update beacon identity now, triggered from GUI
+     *
+     * @param view
+     */
+    public void updateBeacon(View view) {
+        Logger.debug(tag, "Beacon transmitter change identity requested manually");
+        if (C19XApplication.getBeaconTransmitter().isStarted() && C19XApplication.getDeviceRegistration().isRegistered()) {
+            C19XApplication.getBeaconTransmitter().stop();
+            C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
+        }
+    }
+
+    /**
+     * Update close contact data now, triggered from GUI
+     *
+     * @param view
+     */
+    public void updateContactDuration(View view) {
+        Logger.debug(tag, "Contact duration update requested manually");
+        C19XApplication.getRiskAnalysis().updateAssessment();
+    }
+
+
+    /**
+     * Update global status log data now, triggered from GUI
+     *
+     * @param view
+     */
+    public void updateData(View view) {
+        Logger.debug(tag, "Global status log update requested manually");
+        new GlobalStatusLogReceiver().onReceive(null, null);
+    }
+
+    public void onClickContactStatus(View view) {
+        switch (C19XApplication.getRiskAnalysis().getContact()) {
+            case HealthStatus.NO_REPORT:
+                ActivityUtil.showDialog(this, R.string.contact_status_option_no_report, R.string.contact_status_option_no_report_description, () -> {
+                }, null);
+                break;
+            case HealthStatus.INFECTIOUS:
+                ActivityUtil.showDialog(this, R.string.contact_status_option_infectious, R.string.contact_status_option_infectious_description, () -> {
+                }, null);
+                break;
+        }
+    }
+
+    public void onClickAdviceStatus(View view) {
+        switch (C19XApplication.getRiskAnalysis().getAdvice()) {
+            case HealthStatus.NO_RESTRICTION:
+                ActivityUtil.showDialog(this, R.string.advice_status_option_no_restriction, R.string.advice_status_option_no_restriction_description, () -> {
+                }, null);
+                break;
+            case HealthStatus.STAY_AT_HOME:
+                ActivityUtil.showDialog(this, R.string.advice_status_option_stay_at_home, R.string.advice_status_option_stay_at_home_description, () -> {
+                }, null);
+                break;
+            case HealthStatus.SELF_ISOLATION:
+                ActivityUtil.showDialog(this, R.string.advice_status_option_self_isolation, R.string.advice_status_option_self_isolation_description, () -> {
+                }, null);
+                break;
+        }
     }
 
     /**
@@ -220,15 +288,15 @@ public class MainActivity extends Activity {
             // Get target health status
             byte viewHealthStatus = HealthStatus.NO_SYMPTOM;
             switch (view.getId()) {
-                case R.id.healthOptionNoSymptom: {
+                case R.id.healthStatusOptionNoSymptom: {
                     viewHealthStatus = HealthStatus.NO_SYMPTOM;
                     break;
                 }
-                case R.id.healthOptionHasSymptom: {
+                case R.id.healthStatusOptionHasSymptom: {
                     viewHealthStatus = HealthStatus.HAS_SYMPTOM;
                     break;
                 }
-                case R.id.healthOptionConfirmedDiagnosis: {
+                case R.id.healthStatusOptionConfirmedDiagnosis: {
                     viewHealthStatus = HealthStatus.CONFIRMED_DIAGNOSIS;
                     break;
                 }
@@ -239,28 +307,37 @@ public class MainActivity extends Activity {
             }
 
             // Post status report
-            final long id = C19XApplication.getDeviceRegistration().getIdentifier();
             final byte currentHealthStatus = C19XApplication.getHealthStatus().getStatus();
             final byte targetHealthStatus = viewHealthStatus;
             if (targetHealthStatus != currentHealthStatus) {
-                if (C19XApplication.getDeviceRegistration().isRegistered()) {
-                    Logger.debug(tag, "Self-report status update (current={},target={})", HealthStatus.toString(currentHealthStatus), HealthStatus.toString(targetHealthStatus));
-                    C19XApplication.getNetworkClient().postHealthStatus(id, C19XApplication.getDeviceRegistration().getSharedSecretKey(), targetHealthStatus, r -> {
-                        if (r.getValue()) {
-                            C19XApplication.getHealthStatus().setStatus(targetHealthStatus);
-                            Logger.debug(tag, "Self-report status update successful (current={},previous={})", C19XApplication.getHealthStatus(), HealthStatus.toString(currentHealthStatus));
-                            ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusSuccess, null, null);
-                        } else {
-                            Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
-                            setHealthStatus(currentHealthStatus);
-                            ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusFailedOnNetwork, null, null);
-                        }
-                    });
-                } else {
-                    Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
-                    setHealthStatus(currentHealthStatus);
-                    ActivityUtil.showDialog(this, R.string.dialogSetHealthStatusFailedOnRegistration, null, null);
-                }
+                ActivityUtil.showDialog(this,
+                        R.string.health_status_dialog_title,
+                        R.string.health_status_dialog_description,
+                        () -> {
+                            if (C19XApplication.getDeviceRegistration().isRegistered()) {
+                                final long id = C19XApplication.getDeviceRegistration().getIdentifier();
+                                Logger.debug(tag, "Self-report status update (current={},target={})", HealthStatus.toString(currentHealthStatus), HealthStatus.toString(targetHealthStatus));
+                                C19XApplication.getNetworkClient().postHealthStatus(id, C19XApplication.getDeviceRegistration().getSharedSecretKey(), targetHealthStatus, r -> {
+                                    if (r.getValue()) {
+                                        C19XApplication.getHealthStatus().setStatus(targetHealthStatus);
+                                        Logger.debug(tag, "Self-report status update successful (current={},previous={})", C19XApplication.getHealthStatus(), HealthStatus.toString(currentHealthStatus));
+                                        ActivityUtil.showDialog(this, R.string.health_status_dialog_title, R.string.health_status_dialog_submit_success, () -> {
+                                        }, null);
+                                    } else {
+                                        Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
+                                        setHealthStatus(currentHealthStatus);
+                                        ActivityUtil.showDialog(this, R.string.health_status_dialog_title, R.string.health_status_dialog_failed_network, () -> {
+                                        }, null);
+                                    }
+                                });
+                            } else {
+                                Logger.warn(tag, "Self-report status update failed, reverting to previous status (target={},revertingBackTo={})", HealthStatus.toString(targetHealthStatus), HealthStatus.toString(currentHealthStatus));
+                                setHealthStatus(currentHealthStatus);
+                                ActivityUtil.showDialog(this, R.string.health_status_dialog_title, R.string.health_status_dialog_failed_registration, () -> {
+                                }, null);
+                            }
+                        },
+                        () -> setHealthStatus(currentHealthStatus));
             }
         }
     }
@@ -273,17 +350,17 @@ public class MainActivity extends Activity {
     private void setHealthStatus(final byte status) {
         switch (status) {
             case HealthStatus.NO_SYMPTOM: {
-                ((RadioButton) findViewById(R.id.healthOptionNoSymptom)).setChecked(true);
+                ((RadioButton) findViewById(R.id.healthStatusOptionNoSymptom)).setChecked(true);
                 C19XApplication.getHealthStatus().setStatus(HealthStatus.NO_SYMPTOM);
                 break;
             }
             case HealthStatus.HAS_SYMPTOM: {
-                ((RadioButton) findViewById(R.id.healthOptionHasSymptom)).setChecked(true);
+                ((RadioButton) findViewById(R.id.healthStatusOptionHasSymptom)).setChecked(true);
                 C19XApplication.getHealthStatus().setStatus(HealthStatus.HAS_SYMPTOM);
                 break;
             }
             case HealthStatus.CONFIRMED_DIAGNOSIS: {
-                ((RadioButton) findViewById(R.id.healthOptionConfirmedDiagnosis)).setChecked(true);
+                ((RadioButton) findViewById(R.id.healthStatusOptionConfirmedDiagnosis)).setChecked(true);
                 C19XApplication.getHealthStatus().setStatus(HealthStatus.CONFIRMED_DIAGNOSIS);
                 break;
             }
@@ -296,19 +373,19 @@ public class MainActivity extends Activity {
      * @param status
      */
     private void setContactStatus(final byte status) {
-        final TextView option = (TextView) findViewById(R.id.contactOption);
-        final TextView description = (TextView) findViewById(R.id.contactOptionDescription);
+        final TextView option = (TextView) findViewById(R.id.contactStatusOption);
+        final TextView description = (TextView) findViewById(R.id.contactStatusOptionDescription);
         switch (status) {
             case HealthStatus.NO_REPORT: {
-                option.setText(R.string.contactOptionNoReport);
+                option.setText(R.string.contact_status_option_no_report);
                 option.setBackgroundResource(R.color.colorGreen);
-                description.setText(R.string.contactOptionNoReportDescription);
+                description.setText(R.string.contact_status_option_no_report_description);
                 break;
             }
             case HealthStatus.INFECTIOUS: {
-                option.setText(R.string.contactOptionInfectious);
+                option.setText(R.string.contact_status_option_infectious);
                 option.setBackgroundResource(R.color.colorRed);
-                description.setText(R.string.contactOptionInfectiousDescription);
+                description.setText(R.string.contact_status_option_infectious_description);
                 break;
             }
         }
@@ -324,23 +401,63 @@ public class MainActivity extends Activity {
         final TextView description = (TextView) findViewById(R.id.adviceOptionDescription);
         switch (status) {
             case HealthStatus.NO_RESTRICTION: {
-                option.setText(R.string.adviceOptionNoRestriction);
+                option.setText(R.string.advice_status_option_no_restriction);
                 option.setBackgroundResource(R.color.colorGreen);
-                description.setText(R.string.adviceOptionNoRestrictionDescription);
+                description.setText(R.string.advice_status_option_no_restriction_description);
                 break;
             }
             case HealthStatus.STAY_AT_HOME: {
-                option.setText(R.string.adviceOptionStayAtHome);
+                option.setText(R.string.advice_status_option_stay_at_home);
                 option.setBackgroundResource(R.color.colorAmber);
-                description.setText(R.string.adviceOptionStayAtHomeDescription);
+                description.setText(R.string.advice_status_option_stay_at_home_description);
                 break;
             }
             case HealthStatus.SELF_ISOLATION: {
-                option.setText(R.string.adviceOptionSelfIsolation);
+                option.setText(R.string.advice_status_option_self_isolation);
                 option.setBackgroundResource(R.color.colorRed);
-                description.setText(R.string.adviceOptionSelfIsolationDescription);
+                description.setText(R.string.advice_status_option_self_isolation_description);
                 break;
             }
+        }
+    }
+
+    /**
+     * Set contact duration
+     *
+     * @param riskFactors
+     */
+    private void setContactDuration(final RiskFactors riskFactors) {
+        final TextView textView = (TextView) findViewById(R.id.contactDuration);
+        final long contactDurationThreshold = C19XApplication.getGlobalStatusLog().getContactDurationThreshold();
+        final long exposureDurationThreshold = C19XApplication.getGlobalStatusLog().getExposureDurationThreshold();
+        final long minutes = riskFactors.closeContactDuration / 60000;
+        if (minutes <= 1) {
+            textView.setText(R.string.status_contact_none);
+        } else if (minutes <= 5) {
+            textView.setText(R.string.status_contact_5);
+        } else if (minutes <= 10) {
+            textView.setText(R.string.status_contact_10);
+        } else if (minutes <= 30) {
+            textView.setText(R.string.status_contact_30);
+        } else if (minutes <= 120) {
+            textView.setText(R.string.status_contact_1h);
+        } else {
+            final long hours = minutes / 60;
+            if (hours <= 48) {
+                textView.setText(hours + " hours");
+            } else {
+                final long days = hours / 24;
+                textView.setText(days + " days");
+            }
+        }
+
+        if (riskFactors.closeContactDuration < contactDurationThreshold) {
+            textView.setText(R.string.status_contact_none);
+            textView.setBackgroundResource(R.color.colorGreen);
+        } else if (riskFactors.closeContactDuration < exposureDurationThreshold) {
+            textView.setBackgroundResource(R.color.colorAmber);
+        } else {
+            textView.setBackgroundResource(R.color.colorRed);
         }
     }
 
@@ -371,6 +488,7 @@ public class MainActivity extends Activity {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
     }
+
 
 
 //    /**

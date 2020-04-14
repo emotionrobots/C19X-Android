@@ -1,280 +1,286 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="org.c19x.gui.MainActivity">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/marginMedium"
-        android:layout_marginRight="@dimen/marginMedium">
-
-        <!-- YOUR STATUS -->
-        <TextView
-            android:id="@+id/healthTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/marginSmall"
-            android:text="@string/healthTitle"
-            android:textSize="@dimen/textLarge"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <RadioGroup
-            android:id="@+id/healthOptions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/healthTitle">
-
-            <RadioButton
-                android:id="@+id/healthOptionNoSymptom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorGreen"
-                android:buttonTint="@color/colorWhite"
-                android:checked="true"
-                android:onClick="setHealthStatus"
-                android:padding="@dimen/marginMedium"
-                android:text="@string/healthOptionNoSymptom"
-                android:textColor="@color/colorWhite"
-                android:textSize="@dimen/textMedium" />
-
-            <RadioButton
-                android:id="@+id/healthOptionHasSymptom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorAmber"
-                android:buttonTint="@color/colorWhite"
-                android:onClick="setHealthStatus"
-                android:padding="@dimen/marginMedium"
-                android:text="@string/healthOptionHasSymptom"
-                android:textColor="@color/colorWhite"
-                android:textSize="@dimen/textMedium" />
-
-            <RadioButton
-                android:id="@+id/healthOptionConfirmedDiagnosis"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorRed"
-                android:buttonTint="@color/colorWhite"
-                android:onClick="setHealthStatus"
-                android:padding="@dimen/marginMedium"
-                android:text="@string/healthOptionConfirmedDiagnosis"
-                android:textColor="@color/colorWhite"
-                android:textSize="@dimen/textMedium" />
-        </RadioGroup>
-
-        <!-- YOUR CONTACTS' STATUS -->
-        <View
-            android:id="@+id/healthDivider"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/dividerSize"
-            android:layout_margin="@dimen/dividerMargin"
-            android:background="@color/colorGrey"
-            app:layout_constraintTop_toBottomOf="@id/healthOptions" />
-
-        <TextView
-            android:id="@+id/contactTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/marginSmall"
-            android:text="@string/contactTitle"
-            android:textSize="@dimen/textLarge"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/healthDivider" />
-
-        <TextView
-            android:id="@+id/contactOption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/colorGreen"
-            android:gravity="center"
-            android:padding="@dimen/marginMedium"
-            android:text="@string/contactOptionNoReport"
-            android:textAllCaps="true"
-            android:textColor="@color/colorWhite"
-            android:textSize="@dimen/textMedium"
-            android:textStyle="bold"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contactTitle" />
-
-        <TextView
-            android:id="@+id/contactOptionDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/marginMedium"
-            android:text="@string/contactOptionNoReportDescription"
-            android:textSize="@dimen/textMedium"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contactOption" />
-
-        <View
-            android:id="@+id/contactDivider"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/dividerSize"
-            android:layout_margin="@dimen/dividerMargin"
-            android:background="@color/colorGrey"
-            app:layout_constraintTop_toBottomOf="@id/contactOptionDescription" />
-
-        <TextView
-            android:id="@+id/adviceTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/marginSmall"
-            android:text="@string/adviceTitle"
-            android:textSize="@dimen/textLarge"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contactDivider" />
-
-        <TextView
-            android:id="@+id/adviceOption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/colorAmber"
-            android:gravity="center"
-            android:padding="@dimen/marginMedium"
-            android:text="@string/adviceOptionStayAtHome"
-            android:textAllCaps="true"
-            android:textColor="@color/colorWhite"
-            android:textSize="@dimen/textMedium"
-            android:textStyle="bold"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/adviceTitle" />
-
-        <TextView
-            android:id="@+id/adviceOptionDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/marginMedium"
-            android:text="@string/adviceOptionStayAtHomeDescription"
-            android:textSize="@dimen/textMedium"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/adviceOption" />
-
-        <View
-            android:id="@+id/adviceDivider"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/dividerSize"
-            android:layout_margin="@dimen/dividerMargin"
-            android:background="@color/colorGrey"
-            app:layout_constraintTop_toBottomOf="@id/adviceOptionDescription" />
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@id/mainActivityAppStatus"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            android:layout_marginTop="@dimen/marginMedium"
-            app:layout_constraintTop_toBottomOf="@id/adviceDivider">
+            android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:layout_alignParentLeft="true"
-                android:layout_width="fill_parent"
-                android:orientation="horizontal">
+            <!-- YOUR STATUS -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/healthStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:id="@+id/healthStatusTitle"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:padding="@dimen/marginTiny"
-                    android:text="@string/statusProtectionTitle"
-                    android:textColor="@color/colorWhite"
-                    android:background="@color/colorDarkGrey"
-                    android:textSize="@dimen/textSmall" />
+                    android:padding="@dimen/marginSmall"
+                    android:text="@string/health_status_title"
+                    android:textSize="@dimen/textLarge"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <RadioGroup
+                    android:id="@+id/healthStatusOptions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/healthStatusTitle">
+
+                    <RadioButton
+                        android:id="@+id/healthStatusOptionNoSymptom"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/colorGreen"
+                        android:buttonTint="@color/colorWhite"
+                        android:checked="true"
+                        android:onClick="setHealthStatus"
+                        android:padding="@dimen/marginMedium"
+                        android:text="@string/health_status_option_no_symptom"
+                        android:textColor="@color/colorWhite"
+                        android:textSize="@dimen/textMedium" />
+
+                    <RadioButton
+                        android:id="@+id/healthStatusOptionHasSymptom"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/colorAmber"
+                        android:buttonTint="@color/colorWhite"
+                        android:onClick="setHealthStatus"
+                        android:padding="@dimen/marginMedium"
+                        android:text="@string/health_status_option_has_symptom"
+                        android:textColor="@color/colorWhite"
+                        android:textSize="@dimen/textMedium" />
+
+                    <RadioButton
+                        android:id="@+id/healthStatusOptionConfirmedDiagnosis"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/colorRed"
+                        android:buttonTint="@color/colorWhite"
+                        android:onClick="setHealthStatus"
+                        android:padding="@dimen/marginMedium"
+                        android:text="@string/health_status_option_confirmed_diagnosis"
+                        android:textColor="@color/colorWhite"
+                        android:textSize="@dimen/textMedium" />
+                </RadioGroup>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/contactStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:id="@+id/contactStatusTitle"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:padding="@dimen/marginTiny"
-                    android:layout_marginLeft="@dimen/marginTiny"
-                    android:layout_marginRight="@dimen/marginTiny"
-                    android:text="@string/appVersionTitle"
-                    android:textColor="@color/colorWhite"
-                    android:background="@color/colorDarkGrey"
-                    android:textSize="@dimen/textSmall" />
+                    android:padding="@dimen/marginSmall"
+                    android:text="@string/contact_status_title"
+                    android:textSize="@dimen/textLarge"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:id="@+id/contactStatusOption"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:padding="@dimen/marginTiny"
-                    android:text="@string/dataVersionTitle"
-                    android:textColor="@color/colorWhite"
-                    android:background="@color/colorDarkGrey"
-                    android:textSize="@dimen/textSmall" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:layout_alignParentLeft="true"
-                android:layout_width="fill_parent"
-                android:layout_marginTop="@dimen/marginTiny"
-                android:layout_marginBottom="@dimen/marginLarge"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/protectionStatus"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="@string/statusProtectionOptionStarting"
-                    android:padding="@dimen/marginTiny"
-                    android:background="@color/colorAmber"
-                    android:textColor="@color/colorWhite"
-                    android:textSize="@dimen/textSmall" />
-
-                <TextView
-                    android:id="@+id/appVersion"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:layout_marginLeft="@dimen/marginTiny"
-                    android:layout_marginRight="@dimen/marginTiny"
-                    android:text="@string/appVersion"
-                    android:padding="@dimen/marginTiny"
                     android:background="@color/colorGreen"
+                    android:gravity="center"
+                    android:padding="@dimen/marginLarge"
+                    android:text="@string/contact_status_option_no_report"
+                    android:textAllCaps="true"
                     android:textColor="@color/colorWhite"
-                    android:textSize="@dimen/textSmall" />
+                    android:textSize="@dimen/textLarge"
+                    android:textStyle="bold"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/contactStatusTitle"
+                    android:onClick="onClickContactStatus" />
 
                 <TextView
-                    android:id="@+id/dataVersion"
-                    android:layout_width="0dp"
+                    android:id="@+id/contactStatusOptionDescription"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="@string/dataVersionDownloading"
-                    android:padding="@dimen/marginTiny"
-                    android:background="@color/colorAmber"
-                    android:textColor="@color/colorWhite"
-                    android:textSize="@dimen/textSmall" />
+                    android:padding="@dimen/marginMedium"
+                    android:text="@string/contact_status_option_no_report_description"
+                    android:textSize="@dimen/textMedium"
+                    android:visibility="gone"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/contactStatusOption" />
 
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/adviceStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/adviceTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/marginSmall"
+                    android:text="@string/adviceTitle"
+                    android:textSize="@dimen/textLarge"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/adviceOption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/colorAmber"
+                    android:gravity="center"
+                    android:padding="@dimen/marginLarge"
+                    android:text="@string/advice_status_option_stay_at_home"
+                    android:textAllCaps="true"
+                    android:textColor="@color/colorWhite"
+                    android:textSize="@dimen/textLarge"
+                    android:textStyle="bold"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/adviceTitle"
+                    android:onClick="onClickAdviceStatus" />
+
+                <TextView
+                    android:id="@+id/adviceOptionDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/marginMedium"
+                    android:text="@string/advice_status_option_stay_at_home_description"
+                    android:textSize="@dimen/textMedium"
+                    android:visibility="gone"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/adviceOption" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/mainActivityAppStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent">
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_alignParentLeft="true"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@color/colorDarkGrey"
+                android:padding="@dimen/marginTiny"
+                android:src="@drawable/ic_beacon"
+                android:onClick="updateBeacon" />
+
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/marginTiny"
+                android:layout_weight="1"
+                android:background="@color/colorDarkGrey"
+                android:padding="@dimen/marginTiny"
+                android:src="@drawable/ic_contact"
+                android:onClick="updateContactDuration" />
+
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/marginTiny"
+                android:layout_weight="1"
+                android:background="@color/colorDarkGrey"
+                android:padding="@dimen/marginTiny"
+                android:src="@drawable/ic_update"
+                android:onClick="updateData" />
 
         </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</ScrollView>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_alignParentLeft="true"
+            android:layout_marginTop="@dimen/marginTiny"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/beaconStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@color/colorGreen"
+                android:gravity="center"
+                android:padding="@dimen/marginSmall"
+                android:text="@string/status_beacon_on"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textSmall"
+                android:onClick="updateBeacon" />
+
+            <TextView
+                android:id="@+id/contactDuration"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/marginTiny"
+                android:layout_marginRight="@dimen/marginTiny"
+                android:layout_weight="1"
+                android:background="@color/colorGreen"
+                android:gravity="center"
+                android:padding="@dimen/marginSmall"
+                android:text="No close contact"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textSmall"
+                android:onClick="updateContactDuration" />
+
+            <TextView
+                android:id="@+id/dataUpdate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@color/colorGreen"
+                android:gravity="center"
+                android:padding="@dimen/marginSmall"
+                android:text="@string/status_data_update_latest"
+                android:textColor="@color/colorWhite"
+                android:textSize="@dimen/textSmall"
+                android:onClick="updateData" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

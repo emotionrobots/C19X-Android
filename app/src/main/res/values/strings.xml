@@ -11,37 +11,43 @@
     <string name="welcome_progress_beacon">Starting bluetooth location beacon</string>
     <string name="welcome_progress_data">Getting disease transmission data</string>
 
-    <string name="healthTitle">How are you today?</string>
-    <string name="healthOptionNoSymptom">I do not have a high temperature or a new continuous cough</string>
-    <string name="healthOptionHasSymptom">I have a high temperature and/or a new continuous cough</string>
-    <string name="healthOptionConfirmedDiagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19) by the NHS</string>
+    <string name="health_status_title">How are you today?</string>
+    <string name="health_status_option_no_symptom">I do not have a high temperature or a new continuous cough</string>
+    <string name="health_status_option_has_symptom">I have a high temperature and/or a new continuous cough</string>
+    <string name="health_status_option_confirmed_diagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19) by the NHS</string>
+    <string name="health_status_dialog_title">Submit update</string>
+    <string name="health_status_dialog_description">Share your status anonymously to help people who has been in close proximity in recent days? No personal information or location data is ever collected or shared.</string>
+    <string name="health_status_dialog_submit_success">Status has been shared anonymously. Thank you for helping people who has been in close proximity in recent days.</string>
+    <string name="health_status_dialog_failed_network">Cannot submit status update. No internet connection. Please try again later.</string>
+    <string name="health_status_dialog_failed_registration">Cannot submit status update. Device has not been registered. Please reinstall app and try again. Sorry for the inconvenience.</string>
 
-    <string name="contactTitle">Your recent contacts</string>
-    <string name="contactOptionNoReport">Nothing reported</string>
-    <string name="contactOptionNoReportDescription">No report of any COVID-19 infection risk, symptoms or diagnosis</string>
-    <string name="contactOptionInfectious">Infection risk</string>
-    <string name="contactOptionInfectiousDescription">Potential COVID-19 infection, symptoms or confirmed diagnosis has been reported</string>
+
+    <string name="contact_status_title">Your recent contacts</string>
+    <string name="contact_status_option_no_report">Nothing reported</string>
+    <string name="contact_status_option_no_report_description">No report of COVID-19 symptoms, confirmed diagnosis, or potential infection has been received from people who has been in close proximity in recent days.</string>
+    <string name="contact_status_option_infectious">Infection risk</string>
+    <string name="contact_status_option_infectious_description">People who has been in close proximity in recent days have self-reported COVID-19 symptoms, confirmed diagnosis, or potential infection.</string>
 
     <string name="adviceTitle">What you need to do</string>
-    <string name="adviceOptionNoRestriction">No restriction</string>
-    <string name="adviceOptionNoRestrictionDescription">COVID-19 is now under control, you can safely return to your normal activities</string>
-    <string name="adviceOptionStayAtHome">Stay at home</string>
-    <string name="adviceOptionStayAtHomeDescription">Everyone must stay at home to help stop the spread of COVID-19</string>
-    <string name="adviceOptionSelfIsolation">Self-isolation</string>
-    <string name="adviceOptionSelfIsolationDescription">Do not leave your home if you have symptoms of COVID-19 or been in prolonged close contact with someone who does</string>
+    <string name="advice_status_option_no_restriction">No restriction</string>
+    <string name="advice_status_option_no_restriction_description">COVID-19 is now under control, you can safely return to your normal activities</string>
+    <string name="advice_status_option_stay_at_home">Stay at home</string>
+    <string name="advice_status_option_stay_at_home_description">Everyone must stay at home to help stop the spread of COVID-19</string>
+    <string name="advice_status_option_self_isolation">Self-isolation</string>
+    <string name="advice_status_option_self_isolation_description">Do not leave your home if you have symptoms of COVID-19 or been in prolonged close contact with someone who does</string>
 
-    <string name="statusProtectionTitle">Protection</string>
-    <string name="statusProtectionOptionStarting">Starting...</string>
-    <string name="statusProtectionOptionNone">None</string>
-    <string name="statusProtectionOptionSelfOnly">You only</string>
-    <string name="statusProtectionOptionOthersOnly">Others only</string>
-    <string name="statusProtectionOptionCommunity">You and others</string>
+    <string name="status_beacon_off">Detection off</string>
+    <string name="status_beacon_receiver">Receive only</string>
+    <string name="status_beacon_transmitter">Transmit only</string>
+    <string name="status_beacon_on">Detection active</string>
 
-    <string name="appVersionTitle">App version</string>
-    <string name="appVersion">20200403A</string>
-
-    <string name="dataVersionTitle">Infection data</string>
-    <string name="dataVersionDownloading">Downloading...</string>
+    <string name="status_contact_none">No close contact</string>
+    <string name="status_contact_5">About 5 minutes</string>
+    <string name="status_contact_10">About 10 minutes</string>
+    <string name="status_contact_30">About 30 minutes</string>
+    <string name="status_contact_1h">About an hour</string>
+    <string name="status_data_update_latest">Latest infection data</string>
+    <string name="status_data_update_download">Queuing for download</string>
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
@@ -59,10 +65,6 @@
     <string name="dialog_welcome_permission_location_title">Location permission</string>
     <string name="dialog_welcome_permission_location_message">This app does not track your location but permission is required to enable Bluetooth. Please try again.</string>
     <string name="dialog_welcome_permission_location_rationale">This app uses Bluetooth to detect other users in close proximity. It does not use GPS tracking and your location is never recorded or shared. This permission is only required to enable Bluetooth.</string>
-
-    <string name="dialogSetHealthStatusSuccess">Status update has been shared anonymously to protect the people around you. Thank you.</string>
-    <string name="dialogSetHealthStatusFailedOnNetwork">Cannot submit status update. No network connection. Please try again later.</string>
-    <string name="dialogSetHealthStatusFailedOnRegistration">Cannot submit status update. Registration in progress. Please try again later.</string>
 
     <string name="title_activity_welcome">Welcome</string>
     <string name="dummy_button">Dummy Button</string>

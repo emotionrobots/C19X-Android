@@ -10,5 +10,5 @@
     <dimen name="marginSmall">5dp</dimen>
     <dimen name="marginTiny">2dp</dimen>
     <dimen name="dividerSize">2dp</dimen>
-    <dimen name="dividerMargin">10dp</dimen>
+    <dimen name="dividerMargin">40dp</dimen>
 </resources>
