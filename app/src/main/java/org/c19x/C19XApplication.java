@@ -11,8 +11,8 @@ import android.util.Base64;
 
 import org.c19x.beacon.BeaconReceiver;
 import org.c19x.beacon.BeaconTransmitter;
-import org.c19x.beacon.ble.BLEReceiver;
-import org.c19x.beacon.ble.BLETransmitter;
+import org.c19x.beacon.ble2.BLEReceiver;
+import org.c19x.beacon.ble2.BLETransmitter;
 import org.c19x.data.DetectionEventLog;
 import org.c19x.data.DeviceRegistration;
 import org.c19x.data.GlobalStatusLog;
@@ -34,6 +34,7 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -48,6 +49,9 @@ public class C19XApplication extends Application {
      * Bluetooth beacon service Id
      */
     public final static long bluetoothLeServiceId = (testMode ? 1234567890123456789l : 928918273491243897l);
+    public final static long bluetoothLeGattServiceId = (testMode ? 1234567890123456780l : 928918273491243898l);
+    public final static UUID bluetoothLeGattServiceUUID = new UUID(bluetoothLeGattServiceId, 0);
+    public final static UUID bluetoothLeGattServiceCharacteristicUUID = new UUID(bluetoothLeGattServiceId, 1);
     /**
      * Anonymous ID range, set to range=2^N where range is close to a multiple of population size.
      */
@@ -315,6 +319,7 @@ public class C19XApplication extends Application {
     public final static BeaconTransmitter getBeaconTransmitter() {
         if (beaconTransmitter == null) {
             beaconTransmitter = new BLETransmitter();
+            beaconTransmitter.addListener(getDetectionEventLog());
             /**
              * Refresh beacon transmitter alias identifier every 20 minutes
              */
@@ -409,7 +414,7 @@ public class C19XApplication extends Application {
         if (getGlobalStatusLog().getServerAddress() != null) {
             getNetworkClient().setServer(getGlobalStatusLog().getServerAddress());
         }
-        getBeaconReceiver().setDutyCycle(getGlobalStatusLog().getBeaconReceiverOnDuration(), getGlobalStatusLog().getBeaconReceiverOffDuration());
+        getBeaconReceiver().setDutyCycle(getGlobalStatusLog().getBeaconReceiverOnDuration(), (testMode ? 1 : getGlobalStatusLog().getBeaconReceiverOffDuration()));
         getDetectionEventLog().setRetentionPeriod(getGlobalStatusLog().getRetentionPeriod());
         getDetectionEventLog().setContactDurationThreshold(getGlobalStatusLog().getContactDurationThreshold());
         getDetectionEventLog().setSignalStrengthThreshold(getGlobalStatusLog().getSignalStrengthThreshold());

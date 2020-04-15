@@ -42,14 +42,12 @@
     <string name="advice_status_option_self_isolation">Self-isolation</string>
     <string name="advice_status_option_self_isolation_description">Do not leave your home if you have symptoms or confirmed diagnosis of COVID-19 or been in prolonged close contact with someone who does.</string>
     <string name="advice_status_option_self_isolation_notification">You are advised to self-isolate</string>
-    <string name="status_beacon_off">Scanner off</string>
-    <string name="status_beacon_receiver">Receive only</string>
-    <string name="status_beacon_transmitter">Transmit only</string>
-    <string name="status_beacon_on">Scanning</string>
 
+    <string name="status_beacon_off">Beacon OFF</string>
+    <string name="status_beacon_on">Beacon ON</string>
     <string name="status_contact_none">No contact</string>
     <string name="status_data_update_latest">Latest data</string>
-    <string name="status_data_update_download">Queuing for download</string>
+    <string name="status_data_update_download">Pending update</string>
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
@@ -67,8 +65,4 @@
     <string name="dialog_welcome_permission_location_title">Location permission</string>
     <string name="dialog_welcome_permission_location_message">This app does not track your location but permission is required to enable Bluetooth. Please try again.</string>
     <string name="dialog_welcome_permission_location_rationale">This app uses Bluetooth to detect other users in close proximity. It does not use GPS tracking and your location is never recorded or shared. This permission is only required to enable Bluetooth.</string>
-
-    <string name="title_activity_welcome">Welcome</string>
-    <string name="dummy_button">Dummy Button</string>
-    <string name="dummy_content">DUMMY\nCONTENT</string>
 </resources>

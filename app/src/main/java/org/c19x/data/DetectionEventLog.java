@@ -220,7 +220,7 @@ public class DetectionEventLog extends BeaconListener {
     }
 
     @Override
-    public void detect(final long timestamp, final long identifier, final float rssi) {
+    public synchronized void detect(final long timestamp, final long identifier, final float rssi) {
         if (rssi < signalStrengthThreshold) {
             Logger.debug(tag, "Detection event discarded, below signal strength threshold (timestamp={},id={},rssi={},threshold={})", timestamp, identifier, rssi, signalStrengthThreshold);
             return;

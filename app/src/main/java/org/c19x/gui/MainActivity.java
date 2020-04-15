@@ -180,12 +180,6 @@ public class MainActivity extends Activity {
                 if (!transmitter && !receiver) {
                     textView.setText(R.string.status_beacon_off);
                     textView.setBackgroundResource(R.color.colorRed);
-                } else if (transmitter && !receiver) {
-                    textView.setText(R.string.status_beacon_transmitter);
-                    textView.setBackgroundResource(R.color.colorAmber);
-                } else if (!transmitter && receiver) {
-                    textView.setText(R.string.status_beacon_receiver);
-                    textView.setBackgroundResource(R.color.colorAmber);
                 } else {
                     textView.setText(R.string.status_beacon_on);
                     textView.setBackgroundResource(R.color.colorGreen);
