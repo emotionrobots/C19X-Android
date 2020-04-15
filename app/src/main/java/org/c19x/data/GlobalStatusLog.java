@@ -35,7 +35,9 @@ public class GlobalStatusLog {
 	// 27..31 SignalStrengthThreshold (4-byte float)
 	// 31..35 ContactDurationThreshold (4-byte int)
 	// 35..39 ExposureDurationThreshold (4-byte int)
-	// 39..128 Reserved
+	// 39..43 BeaconReceiverOnDuration (4-byte int)
+	// 43..47 BeaconReceiverOffDuration (4-byte int)
+	// 47..128 Reserved
 	// 128..256 ServerAddress (128-byte string)
 	// 256.. Infectious (bit data)
 
@@ -88,6 +90,10 @@ public class GlobalStatusLog {
 		// Exposure to infected person for over 30 minutes puts you at risk (Singapore
 		// TraceTogether tracing criteria)
 		setExposureDurationThreshold(30 * minuteInMillis);
+		// Beacon receiver duty cycle is 15 seconds ON, 85 seconds OFF (Singapore
+		// TraceTogether duty cycle)
+		setBeaconReceiverOnDuration(15000);
+		setBeaconReceiverOffDuration(85000);
 		// Server address
 		setServerAddress(C19XApplication.defaultServer);
 	}
@@ -275,6 +281,52 @@ public class GlobalStatusLog {
 	 */
 	public int getExposureDurationThreshold() {
 		return byteBuffer.getInt(35);
+	}
+
+	// 39..43 BeaconReceiverOnDuration (4-byte int)
+	// ============================================================================================
+
+	/**
+	 * Set beacon receiver duty cycle (ON duration) for determining how long to scan for beacons.
+	 * BlueTrace recommends 15-20% on time.
+	 *
+	 * @param n Duration in milliseconds.
+	 */
+	public void setBeaconReceiverOnDuration(int n) {
+		byteBuffer.putInt(39, n);
+	}
+
+	/**
+	 * Get beacon receiver duty cycle (ON duration) for determining how long to scan for beacons.
+	 * BlueTrace recommends 15-20% on time.
+	 *
+	 * @return Duration in milliseconds.
+	 */
+	public int getBeaconReceiverOnDuration() {
+		return byteBuffer.getInt(39);
+	}
+
+	// 43..47 BeaconReceiverOffDuration (4-byte int)
+	// ============================================================================================
+
+	/**
+	 * Set beacon receiver duty cycle (OFF duration) for determining how long to scan for beacons.
+	 * BlueTrace recommends 80-85% off time.
+	 *
+	 * @param n Duration in milliseconds.
+	 */
+	public void setBeaconReceiverOffDuration(int n) {
+		byteBuffer.putInt(43, n);
+	}
+
+	/**
+	 * Get beacon receiver duty cycle (OFF duration) for determining how long to scan for beacons.
+	 * BlueTrace recommends 80-85% off time.
+	 *
+	 * @return Duration in milliseconds.
+	 */
+	public int getBeaconReceiverOffDuration() {
+		return byteBuffer.getInt(43);
 	}
 
 	// 128..256 ServerAddress (128-byte string)

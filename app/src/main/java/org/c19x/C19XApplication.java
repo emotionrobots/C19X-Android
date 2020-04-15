@@ -339,6 +339,9 @@ public class C19XApplication extends Application {
     public final static BeaconReceiver getBeaconReceiver() {
         if (beaconReceiver == null) {
             beaconReceiver = new BLEReceiver();
+            beaconReceiver.setDutyCycle(
+                    getGlobalStatusLog().getBeaconReceiverOnDuration(),
+                    getGlobalStatusLog().getBeaconReceiverOffDuration());
             beaconReceiver.addListener(getDetectionEventLog());
         }
         return beaconReceiver;
@@ -406,6 +409,7 @@ public class C19XApplication extends Application {
         if (getGlobalStatusLog().getServerAddress() != null) {
             getNetworkClient().setServer(getGlobalStatusLog().getServerAddress());
         }
+        getBeaconReceiver().setDutyCycle(getGlobalStatusLog().getBeaconReceiverOnDuration(), getGlobalStatusLog().getBeaconReceiverOffDuration());
         getDetectionEventLog().setRetentionPeriod(getGlobalStatusLog().getRetentionPeriod());
         getDetectionEventLog().setContactDurationThreshold(getGlobalStatusLog().getContactDurationThreshold());
         getDetectionEventLog().setSignalStrengthThreshold(getGlobalStatusLog().getSignalStrengthThreshold());

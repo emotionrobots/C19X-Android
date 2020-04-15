@@ -147,6 +147,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
 
     @Override
     public void setDutyCycle(int onDuration, int offDuration) {
+        Logger.debug(tag, "Set receiver duty cycle (on={},off={})", onDuration, offDuration);
         flipFlopTimer.setOnDuration(onDuration);
         flipFlopTimer.setOffDuration(offDuration);
     }
