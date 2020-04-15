@@ -403,6 +403,13 @@ public class C19XApplication extends Application {
                     riskAnalysis.updateAssessment();
                 }
             });
+            // Update risk analysis regularly
+            getTimer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    riskAnalysis.updateAssessment();
+                }
+            }, 0, (testMode ? 1 : 5) * 60 * 1000);
         }
         return riskAnalysis;
     }

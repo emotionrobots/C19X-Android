@@ -448,13 +448,11 @@ public class MainActivity extends Activity {
 
         if (minutes < 2) {
             textView.setText(R.string.status_contact_none);
-        } else if (minutes < 10) {
-            textView.setText((minutes / 2) * 2 + " minutes");
-        } else if (minutes < 60) {
-            textView.setText((minutes / 10) * 10 + " minutes");
+        } else if (minutes < 120) {
+            textView.setText(minutes + " minutes");
         } else {
             final int hours = (int) (minutes / 60);
-            textView.setText(hours + " hour" + (hours == 1 ? "" : "s"));
+            textView.setText(hours + " hours");
         }
 
         if (riskFactors.closeContactDuration >= exposureDurationThreshold) {

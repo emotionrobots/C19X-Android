@@ -79,7 +79,7 @@ public class GlobalStatusLog {
 		// Sekara, Vedran & Lehmann, Sune. (2014). The Strength of Friendship Ties in
 		// Proximity Sensor Data. PloS one. 9. e100915. 10.1371/journal.pone.0100915.
 		setSignalStrengthThreshold(-82.03f - 4.57f);
-		// Bluetooth discovery inquiry scan lasts for about 12 seconds, thus a multiple
+		// Bluetooth discovery inquiry scan lasts for about 15 seconds, thus a multiple
 		// of this value offers the sample period for consecutive timestamps, taking
 		// into account signal drop outs.
 		setContactDurationThreshold(5 * minuteInMillis);
