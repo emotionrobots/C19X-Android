@@ -107,19 +107,18 @@ public class MainActivity extends Activity {
         // Setup app UI
         ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_main);
-        setDefaultState();
 
         // Start monitoring bluetooth state
         registerBluetoothBeaconListeners();
 
         // Start monitoring risk analysis results
         C19XApplication.getRiskAnalysis().addListener(riskAnalysisListener);
-        C19XApplication.getRiskAnalysis().updateAssessment();
 
         // Start monitoring global status log version update
         C19XApplication.getGlobalStatusLog().addListener(globalStatusLogListener);
 
-        setNotification(getString(R.string.app_notification));
+        setDefaultState();
+        C19XApplication.getRiskAnalysis().updateAssessment();
     }
 
     @Override
@@ -222,6 +221,7 @@ public class MainActivity extends Activity {
         setHealthStatus(C19XApplication.getHealthStatus().getStatus());
         setContactStatus(C19XApplication.getRiskAnalysis().getContact());
         setAdviceStatus(C19XApplication.getRiskAnalysis().getAdvice());
+        setNotification(getString(R.string.app_notification));
         setNewsFeedBasedOnRiskAnalysis();
     }
 
@@ -406,7 +406,9 @@ public class MainActivity extends Activity {
             case HealthStatus.INFECTIOUS: {
                 option.setText(R.string.contact_status_option_infectious);
                 option.setBackgroundResource(R.color.colorRed);
-                setNotification(getString(R.string.contact_status_option_infectious_notification));
+                if (C19XApplication.getRiskAnalysis().getAdvice() != HealthStatus.SELF_ISOLATION) {
+                    setNotification(getString(R.string.contact_status_option_infectious_notification));
+                }
                 break;
             }
         }
@@ -545,6 +547,7 @@ public class MainActivity extends Activity {
      * Create notification
      */
     private final void setNotification(final String text) {
+        Logger.info(tag, "Set notification (existing={},new={})", notificationText, text);
         final String channelId = getString(R.string.app_fullname);
         if (text != null) {
             if (!text.equals(notificationText)) {
@@ -574,6 +577,7 @@ public class MainActivity extends Activity {
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
             notificationManager.deleteNotificationChannel(channelId);
         }
+        notificationText = text;
     }
 
 }

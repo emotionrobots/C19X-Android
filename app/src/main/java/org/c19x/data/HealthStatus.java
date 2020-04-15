@@ -1,5 +1,6 @@
 package org.c19x.data;
 
+import org.c19x.C19XApplication;
 import org.c19x.util.messaging.DefaultBroadcaster;
 
 /**
@@ -7,6 +8,7 @@ import org.c19x.util.messaging.DefaultBroadcaster;
  */
 public final class HealthStatus extends DefaultBroadcaster<HealthStatusListener> {
     private final static String tag = HealthStatus.class.getName();
+    private final static String statusKey = "HealthStatus.Status";
 
     // Health status of an individual
     /**
@@ -62,6 +64,16 @@ public final class HealthStatus extends DefaultBroadcaster<HealthStatusListener>
      */
     private byte status = NO_SYMPTOM;
 
+    public HealthStatus() {
+        final String statusValue = C19XApplication.getPreference(statusKey, null);
+        if (statusValue == null) {
+            status = NO_SYMPTOM;
+            C19XApplication.setPreference(statusKey, Byte.toString(status));
+        } else {
+            status = Byte.parseByte(statusValue);
+        }
+    }
+
     /**
      * Get current health status.
      *
@@ -80,6 +92,7 @@ public final class HealthStatus extends DefaultBroadcaster<HealthStatusListener>
         final byte currentStatus = this.status;
         if (currentStatus != status) {
             this.status = status;
+            C19XApplication.setPreference(statusKey, Byte.toString(status));
             broadcast(l -> l.update(currentStatus, status));
         }
     }

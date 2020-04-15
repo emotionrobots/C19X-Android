@@ -11,6 +11,7 @@ import android.os.ParcelUuid;
 import org.c19x.C19XApplication;
 import org.c19x.beacon.BeaconListener;
 import org.c19x.beacon.BeaconReceiver;
+import org.c19x.util.FlipFlopTimer;
 import org.c19x.util.Logger;
 import org.c19x.util.messaging.DefaultBroadcaster;
 
@@ -73,6 +74,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         }
     };
     private boolean started = false;
+    private FlipFlopTimer flipFlopTimer;
 
     public BLEReceiver() {
         this.bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -85,20 +87,35 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         } else {
             Logger.debug(tag, "Bluetooth LE scanner is supported");
         }
+        this.flipFlopTimer = new FlipFlopTimer(4000, 4000,
+                () -> {
+                    if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
+                        try {
+                            bluetoothLeScanner.startScan(bluetoothLeScanFilter, bluetoothLeScanSettings, scanCallback);
+                        } catch (Throwable e) {
+                            Logger.warn(tag, "Beacon receiver start exception", e);
+                        }
+                    }
+                },
+                () -> {
+                    if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
+                        try {
+                            bluetoothLeScanner.stopScan(scanCallback);
+                        } catch (Throwable e) {
+                            Logger.warn(tag, "Beacon receiver stop exception", e);
+                        }
+                    }
+                });
     }
 
     @Override
     public void start() {
         if (!started) {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-                try {
-                    bluetoothLeScanner.startScan(bluetoothLeScanFilter, bluetoothLeScanSettings, scanCallback);
-                    started = true;
-                    broadcast(l -> l.start());
-                    Logger.debug(tag, "Beacon receiver started");
-                } catch (Throwable e) {
-                    Logger.warn(tag, "Beacon receiver start exception", e);
-                }
+                flipFlopTimer.start();
+                started = true;
+                broadcast(l -> l.start());
+                Logger.debug(tag, "Beacon receiver started");
             } else {
                 Logger.warn(tag, "Beacon receiver start failed (adapter={},enabled={})", bluetoothAdapter, (bluetoothAdapter != null && bluetoothAdapter.isEnabled()));
             }
@@ -111,11 +128,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     public void stop() {
         if (started) {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-                try {
-                    bluetoothLeScanner.stopScan(scanCallback);
-                } catch (Throwable e) {
-                    Logger.warn(tag, "Beacon receiver stop exception", e);
-                }
+                flipFlopTimer.stop();
             } else {
                 Logger.warn(tag, "Beacon receiver stop failed (adapter={},enabled={})", bluetoothAdapter != null, (bluetoothAdapter != null && bluetoothAdapter.isEnabled()));
             }
@@ -130,6 +143,12 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     @Override
     public boolean isStarted() {
         return started;
+    }
+
+    @Override
+    public void setDutyCycle(int onDuration, int offDuration) {
+        flipFlopTimer.setOnDuration(onDuration);
+        flipFlopTimer.setOffDuration(offDuration);
     }
 
     /**

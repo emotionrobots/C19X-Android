@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.util.Base64;
 
 import org.c19x.beacon.BeaconReceiver;
 import org.c19x.beacon.BeaconTransmitter;
@@ -24,6 +25,7 @@ import org.c19x.network.response.NetworkResponse;
 import org.c19x.util.Logger;
 import org.c19x.util.Storage;
 import org.c19x.util.bluetooth.BluetoothStateMonitor;
+import org.c19x.util.security.SymmetricCipher;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -65,13 +67,13 @@ public class C19XApplication extends Application {
     private static Storage storage;
     private static Timer timer;
     private static Timestamp timestamp;
-    private static DeviceRegistration deviceRegistration;
     private static HealthStatus healthStatus;
+    private static DetectionEventLog detectionEventLog;
+    private static GlobalStatusLog globalStatusLog;
+    private static DeviceRegistration deviceRegistration;
     private static BluetoothStateMonitor bluetoothStateMonitor;
     private static BeaconTransmitter beaconTransmitter;
     private static BeaconReceiver beaconReceiver;
-    private static DetectionEventLog detectionEventLog;
-    private static GlobalStatusLog globalStatusLog;
     private static NetworkClient networkClient;
     private static RiskAnalysis riskAnalysis;
     private static PendingIntent globalStatusLogUpdateTask;
@@ -84,6 +86,8 @@ public class C19XApplication extends Application {
         storage = getStorage();
         timer = getTimer();
         timestamp = getTimestamp();
+        healthStatus = getHealthStatus();
+        detectionEventLog = getDetectionEventLog();
         bluetoothStateMonitor = getBluetoothStateMonitor();
         riskAnalysis = getRiskAnalysis();
         startGlobalStatusLogAutomaticUpdate();
@@ -166,7 +170,19 @@ public class C19XApplication extends Application {
         if (preferences == null) {
             preferences = getContext().getSharedPreferences(getContext().getString(R.string.file_preferences), Context.MODE_PRIVATE);
         }
-        return preferences.getString(key, defaultValue);
+        String value = defaultValue;
+        if (getDeviceRegistration().isRegistered()) {
+            try {
+                final String base64Encrypted = preferences.getString(key, null);
+                if (base64Encrypted != null) {
+                    value = new String(SymmetricCipher.decrypt(getDeviceRegistration().getSharedSecretKey(), Base64.decode(base64Encrypted, Base64.DEFAULT)));
+                }
+            } catch (Throwable e) {
+                Logger.warn(tag, "Failed to decrypt preference (key={})", key, e);
+            }
+        }
+        Logger.debug(tag, "Get preference (key={},value={})", key, value);
+        return value;
     }
 
     /**
@@ -179,9 +195,17 @@ public class C19XApplication extends Application {
         if (preferences == null) {
             preferences = getContext().getSharedPreferences(getContext().getString(R.string.file_preferences), Context.MODE_PRIVATE);
         }
-        final SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(key, value);
-        editor.commit();
+        if (getDeviceRegistration().isRegistered()) {
+            try {
+                final String base64Encrypted = Base64.encodeToString(SymmetricCipher.encrypt(getDeviceRegistration().getSharedSecretKey(), value.getBytes()), Base64.DEFAULT);
+                final SharedPreferences.Editor editor = preferences.edit();
+                editor.putString(key, base64Encrypted);
+                editor.commit();
+                Logger.debug(tag, "Set preference (key={},value={})", key, value);
+            } catch (Throwable e) {
+                Logger.warn(tag, "Failed to encrypt preference (key={})", key, e);
+            }
+        }
     }
 
     /**

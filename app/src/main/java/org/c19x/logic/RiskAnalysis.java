@@ -16,8 +16,28 @@ import org.c19x.util.messaging.DefaultBroadcaster;
  */
 public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
     private final static String tag = RiskAnalysis.class.getName();
-    private final AtomicByte contact = new AtomicByte(HealthStatus.NO_REPORT);
-    private final AtomicByte advice = new AtomicByte(C19XApplication.getGlobalStatusLog().getGovernmentAdvice());
+    private final static String contactKey = "RiskAnalysis.Contact";
+    private final static String adviceKey = "RiskAnalysis.Advice";
+    private final AtomicByte contact = new AtomicByte((byte) 0);
+    private final AtomicByte advice = new AtomicByte((byte) 0);
+
+    public RiskAnalysis() {
+        // Load existing state
+        final String contactState = C19XApplication.getPreference(contactKey, null);
+        final String adviceState = C19XApplication.getPreference(adviceKey, null);
+        if (contactState == null) {
+            contact.set(HealthStatus.NO_REPORT);
+            C19XApplication.setPreference(contactKey, Byte.toString(contact.get()));
+        } else {
+            contact.set(Byte.parseByte(contactState));
+        }
+        if (adviceState == null) {
+            advice.set(C19XApplication.getGlobalStatusLog().getGovernmentAdvice());
+            C19XApplication.setPreference(adviceKey, Byte.toString(advice.get()));
+        } else {
+            advice.set(Byte.parseByte(adviceState));
+        }
+    }
 
     /**
      * Update risk assessment and recommendation according to latest information.
@@ -26,8 +46,10 @@ public class RiskAnalysis extends DefaultBroadcaster<RiskAnalysisListener> {
         final GlobalStatusLog globalStatusLog = C19XApplication.getGlobalStatusLog();
 
         final RiskFactors riskFactors = getRiskFactors(globalStatusLog, C19XApplication.getDetectionEventLog());
-        advice.set(getAdvice(globalStatusLog, riskFactors));
         contact.set(getContact(globalStatusLog, riskFactors));
+        C19XApplication.setPreference(contactKey, Byte.toString(contact.get()));
+        advice.set(getAdvice(globalStatusLog, riskFactors));
+        C19XApplication.setPreference(adviceKey, Byte.toString(advice.get()));
 
         Logger.info(tag, "Risk analysis (contact={}({}),advice={}({}),riskFactors={})", HealthStatus.toString(contact.get()), contact, HealthStatus.toString(advice.get()), advice, riskFactors);
 

@@ -1,6 +1,7 @@
 package org.c19x.data;
 
 import org.c19x.C19XApplication;
+import org.c19x.util.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,7 +21,9 @@ import java.util.zip.Inflater;
  * individuals.
  */
 public class GlobalStatusLog {
+	private final static String tag = GlobalStatusLog.class.getName();
 	private final static int identifierRange = C19XApplication.anonymousIdRange;
+	private final static String logFilename = "globalStatusLog";
 	private ByteBuffer byteBuffer;
 	private final List<GlobalStatusLogListener> listeners = new ArrayList<>();
 
@@ -46,6 +49,11 @@ public class GlobalStatusLog {
 		byteBuffer = ByteBuffer.allocate(256 + identifierRange / 8 + ((identifierRange % 8) == 0 ? 0 : 1));
 		byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
 		setDefaultParameters();
+		// Load from file
+		C19XApplication.getStorage().atomicRead(logFilename, data -> {
+			Logger.debug(tag, "Loaded global status log from storage");
+			setUpdate(data);
+		});
 	}
 
 	/**
@@ -367,6 +375,7 @@ public class GlobalStatusLog {
 			if (success) {
 				byteBuffer = ByteBuffer.wrap(data);
 				byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+				C19XApplication.getStorage().atomicWrite(update, logFilename);
 				success = true;
 			}
 			final long currentVersion = getTimestamp();
