@@ -66,23 +66,25 @@ public class MainActivity extends Activity {
 
         @Override
         public void updated(final long fromVersion, final long toVersion) {
-            final TextView textView = (TextView) findViewById(R.id.dataUpdate);
-            final long currentTime = C19XApplication.getTimestamp().getTime();
-            final long delta = (currentTime - toVersion) / dayMillis;
-            Logger.debug(tag, "Global status log updated (time={},toVersion={},delta={})", currentTime, toVersion, delta);
-            if (delta >= C19XApplication.getGlobalStatusLog().getRetentionPeriod()) {
-                textView.setText(R.string.status_data_update_download);
-                textView.setBackgroundResource(R.color.colorRed);
-            } else if (delta == 0) {
-                textView.setText(R.string.status_data_update_latest);
-                textView.setBackgroundResource(R.color.colorGreen);
-            } else if (delta == 1) {
-                textView.setText("Updated 1 day ago");
-                textView.setBackgroundResource(R.color.colorAmber);
-            } else {
-                textView.setText("Updated " + delta + " day ago");
-                textView.setBackgroundResource(R.color.colorAmber);
-            }
+            runOnUiThread(() -> {
+                final TextView textView = (TextView) findViewById(R.id.dataUpdate);
+                final long currentTime = C19XApplication.getTimestamp().getTime();
+                final long delta = (currentTime - toVersion) / dayMillis;
+                Logger.debug(tag, "Global status log updated (time={},toVersion={},delta={})", currentTime, toVersion, delta);
+                if (delta >= C19XApplication.getGlobalStatusLog().getRetentionPeriod()) {
+                    textView.setText(R.string.status_data_update_download);
+                    textView.setBackgroundResource(R.color.colorRed);
+                } else if (delta == 0) {
+                    textView.setText(R.string.status_data_update_latest);
+                    textView.setBackgroundResource(R.color.colorGreen);
+                } else if (delta == 1) {
+                    textView.setText("Updated 1 day ago");
+                    textView.setBackgroundResource(R.color.colorAmber);
+                } else {
+                    textView.setText("Updated " + delta + " day ago");
+                    textView.setBackgroundResource(R.color.colorAmber);
+                }
+            });
         }
     };
 
@@ -92,10 +94,12 @@ public class MainActivity extends Activity {
     private final RiskAnalysisListener riskAnalysisListener = new RiskAnalysisListener() {
         @Override
         public void update(final RiskFactors riskFactors, final byte contact, final byte advice) {
-            setContactStatus(contact);
-            setAdviceStatus(advice);
-            setContactDuration(riskFactors);
-            setNewsFeedBasedOnRiskAnalysis();
+            runOnUiThread(() -> {
+                setContactStatus(contact);
+                setAdviceStatus(advice);
+                setContactDuration(riskFactors);
+                setNewsFeedBasedOnRiskAnalysis();
+            });
         }
     };
 
@@ -176,14 +180,16 @@ public class MainActivity extends Activity {
                 final boolean receiver = C19XApplication.getBeaconReceiver().isStarted();
                 Logger.debug(tag, "Beacon status update (transmitter={},receiver={})", transmitter, receiver);
 
-                final TextView textView = (TextView) findViewById(R.id.beaconStatus);
-                if (!transmitter && !receiver) {
-                    textView.setText(R.string.status_beacon_off);
-                    textView.setBackgroundResource(R.color.colorRed);
-                } else {
-                    textView.setText(R.string.status_beacon_on);
-                    textView.setBackgroundResource(R.color.colorGreen);
-                }
+                runOnUiThread(() -> {
+                    final TextView textView = (TextView) findViewById(R.id.beaconStatus);
+                    if (!transmitter && !receiver) {
+                        textView.setText(R.string.status_beacon_off);
+                        textView.setBackgroundResource(R.color.colorRed);
+                    } else {
+                        textView.setText(R.string.status_beacon_on);
+                        textView.setBackgroundResource(R.color.colorGreen);
+                    }
+                });
             }
         };
         C19XApplication.getBeaconTransmitter().addListener(beaconListener);
