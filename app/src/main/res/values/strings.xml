@@ -42,7 +42,7 @@
     <string name="advice_status_option_self_isolation">Self-isolation</string>
     <string name="advice_status_option_self_isolation_description">Do not leave your home if you have symptoms or confirmed diagnosis of COVID-19 or been in prolonged close contact with someone who does.</string>
     <string name="advice_status_option_self_isolation_notification">You are advised to self-isolate</string>
-    <string name="status_beacon_off">Detection off</string>
+    <string name="status_beacon_off">Scanner off</string>
     <string name="status_beacon_receiver">Receive only</string>
     <string name="status_beacon_transmitter">Transmit only</string>
     <string name="status_beacon_on">Scanning</string>
