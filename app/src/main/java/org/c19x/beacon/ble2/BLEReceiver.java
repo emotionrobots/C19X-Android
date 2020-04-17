@@ -119,7 +119,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                 }
             }
             if (c19xBeaconService != null) {
-                Logger.debug(tag, "Beacon receiver discovered C19X beacon service");
+                // Logger.debug(tag, "Beacon receiver discovered C19X beacon service");
                 BluetoothGattCharacteristic c19xBeaconServiceCharacteristic = null;
                 for (BluetoothGattCharacteristic bluetoothGattCharacteristic : c19xBeaconService.getCharacteristics()) {
                     final boolean match = (bluetoothGattCharacteristic.getUuid().getMostSignificantBits() == C19XApplication.bluetoothLeServiceId);
@@ -129,12 +129,17 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                     }
                 }
                 if (c19xBeaconServiceCharacteristic != null) {
-                    Logger.debug(tag, "Beacon receiver discovered C19X beacon service characteristic");
+                    Logger.debug(tag, "Beacon receiver writing C19X beacon service characteristic (id={},rssi={})", id, rssi);
                     c19xBeaconServiceCharacteristic.setValue(data);
                     gatt.writeCharacteristic(c19xBeaconServiceCharacteristic);
-                    Logger.debug(tag, "Beacon receiver wrote C19X beacon service characteristic (id={},rssi={})", id, rssi);
                 }
             }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
+            Logger.debug(tag, "Beacon receiver wrote C19X beacon service characteristic (id={},rssi={})", id, rssi);
             gatt.close();
         }
     }

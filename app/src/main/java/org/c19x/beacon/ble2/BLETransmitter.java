@@ -2,6 +2,7 @@ package org.c19x.beacon.ble2;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattServerCallback;
@@ -133,6 +134,9 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                         final int rssi = byteBuffer.getInt(Long.BYTES);
                         Logger.debug(tag, "Beacon transmitter GATT server received write request (timestamp={},id={},rssi={})", timestamp, id, rssi);
                         broadcast(l -> l.detect(timestamp, id, rssi));
+                        if (responseNeeded) {
+                            bluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);
+                        }
                     }
                 }
             };
@@ -159,8 +163,9 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
         final BluetoothGattService bluetoothGattService = new BluetoothGattService(new UUID(C19XApplication.bluetoothLeServiceId, id), BluetoothGattService.SERVICE_TYPE_PRIMARY);
         final BluetoothGattCharacteristic bluetoothGattCharacteristic = new BluetoothGattCharacteristic(
                 new UUID(C19XApplication.bluetoothLeServiceId, 0),
-                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+                BluetoothGattCharacteristic.PROPERTY_WRITE,
                 BluetoothGattCharacteristic.PERMISSION_WRITE);
+        bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         bluetoothGattService.addCharacteristic(bluetoothGattCharacteristic);
         return bluetoothGattService;
     }

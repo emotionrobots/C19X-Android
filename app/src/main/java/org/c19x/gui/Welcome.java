@@ -37,6 +37,8 @@ public class Welcome extends Activity {
     private final AtomicBoolean bluetoothPermissionComplete = new AtomicBoolean(false);
     private final AtomicBoolean locationPermissionComplete = new AtomicBoolean(false);
 
+    private BeaconListener beaconListener = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,7 +50,6 @@ public class Welcome extends Activity {
         ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
                 () -> startApp(),
                 () -> finish());
-
     }
 
     private final void startApp() {
@@ -62,13 +63,7 @@ public class Welcome extends Activity {
         };
         checkProgressTask.run();
 
-        if (C19XApplication.getDeviceRegistration().isRegistered()) {
-            // Fast track startup if device is already registered
-            final CheckBox checkBox = (CheckBox) findViewById(R.id.welcome_progress_id);
-            checkBox.setChecked(true);
-            checkBox.setTextColor(getResources().getColor(R.color.colorGreen, null));
-            startBluetoothLocationBeacon();
-        } else {
+        if (!C19XApplication.getDeviceRegistration().isRegistered()) {
             // Check connection with server
             C19XApplication.getNetworkClient().checkConnectionToServer(r -> {
                 if (r.getValue()) {
@@ -80,6 +75,8 @@ public class Welcome extends Activity {
                     tryAgainLater(r.getNetworkResponse());
                 }
             });
+        } else {
+            startDeviceRegistration();
         }
     }
 
@@ -131,6 +128,12 @@ public class Welcome extends Activity {
                 dataDownloadComplete &&
                 locationPermissionComplete.get() &&
                 bluetoothPermissionComplete.get()) {
+
+            if (beaconListener != null) {
+                C19XApplication.getBeaconTransmitter().removeListener(beaconListener);
+                C19XApplication.getBeaconReceiver().removeListener(beaconListener);
+            }
+
             final Intent intent = new Intent(this, MainActivity.class);
             // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
@@ -152,7 +155,7 @@ public class Welcome extends Activity {
 
                 // Start data download and bluetooth location beacon after registration
                 startDataDownload();
-                startBluetoothLocationBeacon();
+                beaconListener = startBluetoothLocationBeacon();
 
                 C19XApplication.getDeviceRegistration().removeListener(this);
             }
@@ -199,7 +202,7 @@ public class Welcome extends Activity {
     /**
      * Start bluetooth location beacon transmitter and receiver
      */
-    private final void startBluetoothLocationBeacon() {
+    private final BeaconListener startBluetoothLocationBeacon() {
         // Update GUI
         final Runnable uiUpdate = new Runnable() {
             @Override
@@ -245,6 +248,7 @@ public class Welcome extends Activity {
         C19XApplication.getBeaconTransmitter().addListener(beaconListener);
         C19XApplication.getBeaconReceiver().addListener(beaconListener);
         checkBluetoothAndLocationPermissions();
+        return beaconListener;
     }
 
     /**

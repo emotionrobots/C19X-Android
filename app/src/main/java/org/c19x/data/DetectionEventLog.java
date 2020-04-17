@@ -50,8 +50,8 @@ public class DetectionEventLog extends BeaconListener {
     private final LongSparseArray<LongSparseArray<MutableLong>> dailyEncounterLog = new LongSparseArray<>();
     private final Lock logLock = new ReentrantLock(true);
 
-    // Backup log once every 20 minutes
-    private final static long automaticLogBackupTaskScheduleMillis = 20 * 60 * 1000;
+    // Backup log once every 5 minutes
+    private final static long automaticLogBackupTaskScheduleMillis = 5 * 60 * 1000;
     private TimerTask complyWithRetentionPeriodTask = null;
 
 
