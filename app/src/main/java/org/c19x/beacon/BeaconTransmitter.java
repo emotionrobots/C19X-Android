@@ -27,6 +27,13 @@ public interface BeaconTransmitter extends Broadcaster<BeaconListener> {
     boolean isStarted();
 
     /**
+     * Check if capability is supported.
+     *
+     * @return
+     */
+    boolean isSupported();
+
+    /**
      * Get identifier being broadcasted by transmitter.
      *
      * @return

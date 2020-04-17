@@ -3,6 +3,9 @@
     <string name="app_fullname">COVID-19 Tracer</string>
     <string name="app_notification">Scanning for other users in close proximity</string>
 
+    <string name="trial_title">Pre-release software</string>
+    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-17) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
+
     <string name="file_preferences">preferences</string>
     <string name="file_registration">registration</string>
 
@@ -65,4 +68,7 @@
     <string name="dialog_welcome_permission_location_title">Location permission</string>
     <string name="dialog_welcome_permission_location_message">This app does not track your location but permission is required to enable Bluetooth. Please try again.</string>
     <string name="dialog_welcome_permission_location_rationale">This app uses Bluetooth to detect other users in close proximity. It does not use GPS tracking and your location is never recorded or shared. This permission is only required to enable Bluetooth.</string>
+
+    <string name="notification_channel_name">COVID-19 Tracer</string>
+    <string name="notification_channel_description">COVID-19 Tracer notifications</string>
 </resources>

@@ -3,10 +3,13 @@ package org.c19x;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Base64;
 
 import org.c19x.beacon.BeaconReceiver;
@@ -34,7 +37,6 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -43,15 +45,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class C19XApplication extends Application {
     private final static String tag = C19XApplication.class.getName();
 
-    public final static boolean testMode = true;
-
     /**
      * Bluetooth beacon service Id
      */
-    public final static long bluetoothLeServiceId = (testMode ? 1234567890123456789l : 928918273491243897l);
-    public final static long bluetoothLeGattServiceId = (testMode ? 1234567890123456780l : 928918273491243898l);
-    public final static UUID bluetoothLeGattServiceUUID = new UUID(bluetoothLeGattServiceId, 0);
-    public final static UUID bluetoothLeGattServiceCharacteristicUUID = new UUID(bluetoothLeGattServiceId, 1);
+    public final static long bluetoothLeServiceId = 928918273491243897l;
+    public final static long bluetoothLeGattServiceId = 928918273491243898l;
+    public final static String notificationChannelId = "241209384";
     /**
      * Anonymous ID range, set to range=2^N where range is close to a multiple of population size.
      */
@@ -60,7 +59,7 @@ public class C19XApplication extends Application {
     /**
      * Default application server on first use, this will be changed by downloaded updates.
      */
-    public final static String defaultServer = "http://c19x.servehttp.com:80";
+    public final static String defaultServer = "http://c19x.servehttp.com:8080";
 
 
     private static Application application;
@@ -87,6 +86,9 @@ public class C19XApplication extends Application {
         super.onCreate();
         application = this;
         context = getApplicationContext();
+        createNotificationChannel();
+
+
         storage = getStorage();
         timer = getTimer();
         timestamp = getTimestamp();
@@ -99,6 +101,11 @@ public class C19XApplication extends Application {
 
     @Override
     public void onTerminate() {
+        terminate();
+        super.onTerminate();
+    }
+
+    public final static void terminate() {
         Logger.info(tag, "Application terminating");
         getBeaconReceiver().removeListener(getDetectionEventLog());
         getDetectionEventLog().close();
@@ -106,7 +113,6 @@ public class C19XApplication extends Application {
         stopGlobalStatusLogAutomaticUpdate();
         getTimer().cancel();
         Logger.info(tag, "Application terminated");
-        super.onTerminate();
     }
 
     /**
@@ -114,19 +120,14 @@ public class C19XApplication extends Application {
      *
      * @param activity
      */
-    public static void registerOnCreate(final Activity activity) {
-        if (activities.isEmpty()) {
-            if (application != null) {
-                application.onCreate();
-            }
-        }
+    public final static void registerOnCreate(final Activity activity) {
         if (!activities.contains(activity)) {
             activities.add(activity);
             Logger.debug(tag, "Registered activity (activity={},activities={})", activity, activities);
         }
     }
 
-    public static Activity getCurrentActivity() {
+    public final static Activity getCurrentActivity() {
         if (activities.isEmpty()) {
             return null;
         } else {
@@ -140,16 +141,10 @@ public class C19XApplication extends Application {
      *
      * @param activity
      */
-    public static void unregisterOnDestroy(final Activity activity) {
+    public final static void unregisterOnDestroy(final Activity activity) {
         if (activities.contains(activity)) {
             activities.remove(activity);
             Logger.debug(tag, "Unregistered activity (activity={},activities={})", activity, activities);
-            if (activities.isEmpty()) {
-                Logger.debug(tag, "All activities have been destroyed, terminating application");
-                if (application != null) {
-                    application.onTerminate();
-                }
-            }
         }
     }
 
@@ -306,7 +301,6 @@ public class C19XApplication extends Application {
     public final static BluetoothStateMonitor getBluetoothStateMonitor() {
         if (bluetoothStateMonitor == null) {
             bluetoothStateMonitor = new BluetoothStateMonitor();
-            bluetoothStateMonitor.start();
         }
         return bluetoothStateMonitor;
     }
@@ -331,7 +325,7 @@ public class C19XApplication extends Application {
                         getBeaconTransmitter().setId(aliasIdentifier);
                     }
                 }
-            }, 0, (testMode ? 2 : 20) * 60 * 1000);
+            }, 0, 20 * 60 * 1000);
         }
         return beaconTransmitter;
     }
@@ -409,7 +403,7 @@ public class C19XApplication extends Application {
                 public void run() {
                     riskAnalysis.updateAssessment();
                 }
-            }, 0, (testMode ? 1 : 5) * 60 * 1000);
+            }, 0, 5 * 60 * 1000);
         }
         return riskAnalysis;
     }
@@ -421,7 +415,9 @@ public class C19XApplication extends Application {
         if (getGlobalStatusLog().getServerAddress() != null) {
             getNetworkClient().setServer(getGlobalStatusLog().getServerAddress());
         }
-        getBeaconReceiver().setDutyCycle(getGlobalStatusLog().getBeaconReceiverOnDuration(), (testMode ? 1 : getGlobalStatusLog().getBeaconReceiverOffDuration()));
+        getBeaconReceiver().setDutyCycle(
+                getGlobalStatusLog().getBeaconReceiverOnDuration(),
+                getGlobalStatusLog().getBeaconReceiverOffDuration());
         getDetectionEventLog().setRetentionPeriod(getGlobalStatusLog().getRetentionPeriod());
         getDetectionEventLog().setContactDurationThreshold(getGlobalStatusLog().getContactDurationThreshold());
         getDetectionEventLog().setSignalStrengthThreshold(getGlobalStatusLog().getSignalStrengthThreshold());
@@ -464,7 +460,7 @@ public class C19XApplication extends Application {
             globalStatusLogUpdateTask = PendingIntent.getBroadcast(getContext(), 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
             final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
 //            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, globalStatusLogUpdateTask);
-            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), (testMode ? 2000 : AlarmManager.INTERVAL_DAY), globalStatusLogUpdateTask);
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), AlarmManager.INTERVAL_DAY, globalStatusLogUpdateTask);
         }
     }
 
@@ -478,5 +474,18 @@ public class C19XApplication extends Application {
             globalStatusLogUpdateTask = null;
         }
     }
+
+    public final static void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final CharSequence name = getContext().getString(R.string.notification_channel_name);
+            final String description = getContext().getString(R.string.notification_channel_description);
+            final int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            final NotificationChannel channel = new NotificationChannel(notificationChannelId, name, importance);
+            channel.setDescription(description);
+            final NotificationManager notificationManager = getContext().getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
 
 }

@@ -1,4 +1,4 @@
-package org.c19x.beacon.service;
+package org.c19x.beacon.serviceOld;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.AdvertiseCallback;

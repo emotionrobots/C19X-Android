@@ -43,7 +43,7 @@ public class BluetoothStateMonitor extends DefaultBroadcaster<BluetoothStateMoni
             }
         }
     };
-    private BluetoothAdapter bluetoothAdapter;
+    private final BluetoothAdapter bluetoothAdapter;
     private boolean started = false;
 
     /**
@@ -51,6 +51,11 @@ public class BluetoothStateMonitor extends DefaultBroadcaster<BluetoothStateMoni
      */
     public BluetoothStateMonitor() {
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        this.bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    }
+
+    public BluetoothAdapter getBluetoothAdapter() {
+        return bluetoothAdapter;
     }
 
     /**
@@ -58,16 +63,10 @@ public class BluetoothStateMonitor extends DefaultBroadcaster<BluetoothStateMoni
      */
     public void start() {
         if (!started) {
-            this.bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (bluetoothAdapter == null) {
                 broadcast(l -> l.unsupported());
             } else {
                 C19XApplication.getContext().registerReceiver(broadcastReceiver, intentFilter);
-                if (bluetoothAdapter.isEnabled()) {
-                    broadcast(l -> l.enabled());
-                } else {
-                    broadcast(l -> l.disabled());
-                }
             }
             Logger.debug(tag, "Bluetooth state monitor started (supported={},enabled={})", isSupported(), isEnabled());
             started = true;

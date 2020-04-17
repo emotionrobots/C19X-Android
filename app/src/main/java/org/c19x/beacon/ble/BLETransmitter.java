@@ -50,7 +50,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
             @Override
             public void onStartFailure(int errorCode) {
                 started = false;
-                broadcast(l -> l.startFailed(errorCode));
+                broadcast(l -> l.error(errorCode));
                 switch (errorCode) {
                     case ADVERTISE_FAILED_DATA_TOO_LARGE:
                         Logger.warn(tag, "Beacon transmitter start failed (error=dataTooLarge)");
@@ -102,7 +102,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                 }
             } else {
                 started = false;
-                broadcast(l -> l.startFailed(AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
+                broadcast(l -> l.error(AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
             }
         } else {
             Logger.warn(tag, "Beacon transmitter already started");
@@ -132,6 +132,11 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     @Override
     public synchronized boolean isStarted() {
         return started;
+    }
+
+    @Override
+    public boolean isSupported() {
+        return bluetoothLeAdvertiser != null;
     }
 
     @Override

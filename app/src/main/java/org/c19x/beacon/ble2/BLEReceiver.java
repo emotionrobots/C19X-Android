@@ -24,8 +24,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Bluetooth low energy scanner for collecting the identifier of all other discoverable devices.
@@ -38,27 +41,18 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                     new ParcelUuid(new UUID(0xFFFFFFFFFFFFFFFFl, 0)))
             .build());
     private final ScanSettings bluetoothLeScanSettings = new ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .setReportDelay(0)
             .build();
     private final BluetoothAdapter bluetoothAdapter;
     private final BluetoothLeScanner bluetoothLeScanner;
+    private final ConcurrentLinkedQueue<ScanResult> scanResults = new ConcurrentLinkedQueue<>();
 
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
-            final long timestamp = C19XApplication.getTimestamp().getTime();
-            final int rssi = result.getRssi();
-            final List<ParcelUuid> parcelUuids = result.getScanRecord().getServiceUuids();
-            Logger.debug(tag, "Beacon receiver found transmitter (timestamp={},rssi={},uuids={})", timestamp, rssi, parcelUuids);
-            for (final Long id : getDeviceIds(parcelUuids)) {
-                Logger.debug(tag, "Beacon receiver found transmitter id (timestamp={},id={},rssi={})", timestamp, id, rssi);
-                broadcast(l -> l.detect(timestamp, id, rssi));
-            }
-            final long ownId = C19XApplication.getBeaconTransmitter().getId();
-            Logger.debug(tag, "Beacon receiver sending own id to transmitter via GATT (id={},rssi={})", ownId, rssi);
-            result.getDevice().connectGatt(C19XApplication.getContext(), false, new GattCallback(ownId, rssi));
+            scanResults.add(result);
         }
 
         @Override
@@ -81,7 +75,10 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                     Logger.warn(tag, "Beacon receiver scan failed (error=unknown,errorCode={})", errorCode);
                     break;
             }
-            started = false;
+            if (errorCode != ScanCallback.SCAN_FAILED_ALREADY_STARTED) {
+                started = false;
+            }
+            broadcast(l -> l.error(errorCode));
         }
     };
 
@@ -116,7 +113,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
             BluetoothGattService c19xBeaconService = null;
             for (BluetoothGattService bluetoothGattService : gatt.getServices()) {
                 final boolean match = (bluetoothGattService.getUuid().getMostSignificantBits() == C19XApplication.bluetoothLeServiceId);
-                Logger.debug(tag, "Beacon receiver discovered service (service={},match={})", bluetoothGattService.getUuid(), match);
+                // Logger.debug(tag, "Beacon receiver discovered service (service={},match={})", bluetoothGattService.getUuid(), match);
                 if (match) {
                     c19xBeaconService = bluetoothGattService;
                 }
@@ -126,7 +123,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                 BluetoothGattCharacteristic c19xBeaconServiceCharacteristic = null;
                 for (BluetoothGattCharacteristic bluetoothGattCharacteristic : c19xBeaconService.getCharacteristics()) {
                     final boolean match = (bluetoothGattCharacteristic.getUuid().getMostSignificantBits() == C19XApplication.bluetoothLeServiceId);
-                    Logger.debug(tag, "Beacon receiver discovered characteristic (service={},characteristic={},match={})", c19xBeaconService.getUuid(), bluetoothGattCharacteristic.getUuid(), match);
+                    // Logger.debug(tag, "Beacon receiver discovered characteristic (service={},characteristic={},match={})", c19xBeaconService.getUuid(), bluetoothGattCharacteristic.getUuid(), match);
                     if (match) {
                         c19xBeaconServiceCharacteristic = bluetoothGattCharacteristic;
                     }
@@ -157,25 +154,60 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         } else {
             Logger.debug(tag, "Bluetooth LE scanner is supported");
         }
-        this.flipFlopTimer = new FlipFlopTimer(4000, 4000,
+        this.flipFlopTimer = new FlipFlopTimer(5000, 10000,
                 () -> {
-                    if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
+                    Logger.debug(tag, "Beacon receiver starting BLE scanner");
+                    if (bluetoothAdapter != null && bluetoothAdapter.isEnabled() && bluetoothLeScanner != null && started) {
                         try {
                             bluetoothLeScanner.startScan(bluetoothLeScanFilter, bluetoothLeScanSettings, scanCallback);
+                            Logger.debug(tag, "Beacon receiver started BLE scanner");
                         } catch (Throwable e) {
                             Logger.warn(tag, "Beacon receiver start exception", e);
                         }
                     }
                 },
                 () -> {
-                    if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
+                    Logger.debug(tag, "Beacon receiver stopping BLE scanner");
+                    if (bluetoothAdapter != null && bluetoothLeScanner != null) {
                         try {
                             bluetoothLeScanner.stopScan(scanCallback);
+                            Logger.debug(tag, "Beacon receiver stopped BLE scanner");
+                            processResults();
                         } catch (Throwable e) {
                             Logger.warn(tag, "Beacon receiver stop exception", e);
                         }
                     }
                 });
+    }
+
+    /**
+     * Process all scan results collected in a scan cycle.
+     */
+    private synchronized void processResults() {
+        final long timestamp = C19XApplication.getTimestamp().getTime();
+        // Consolidate results by signal strength
+        final Map<Long, ScanResult> devices = new HashMap<>(scanResults.size());
+        scanResults.forEach(result -> {
+            final int rssi = result.getRssi();
+            for (final Long id : getDeviceIds(result.getScanRecord().getServiceUuids())) {
+                if (!devices.containsKey(id) || devices.get(id).getRssi() < rssi) {
+                    devices.put(id, result);
+                }
+            }
+        });
+        Logger.debug(tag, "Beacon receiver found devices (timestamp={},devices={},results={})", timestamp, devices.size(), scanResults.size());
+        // Handle results
+        final long ownId = C19XApplication.getBeaconTransmitter().getId();
+        devices.entrySet().forEach(e -> {
+            final long id = e.getKey();
+            final ScanResult result = e.getValue();
+            final int rssi = result.getRssi();
+            Logger.debug(tag, "Beacon receiver found transmitter (timestamp={},id={},rssi={})", timestamp, id, rssi);
+            broadcast(l -> l.detect(timestamp, id, rssi));
+            Logger.debug(tag, "Beacon receiver sending own id to transmitter via GATT (id={},rssi={})", ownId, rssi);
+            result.getDevice().connectGatt(C19XApplication.getContext(), false, new GattCallback(ownId, rssi));
+        });
+        scanResults.clear();
     }
 
     @Override
@@ -197,12 +229,14 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     @Override
     public void stop() {
         if (started) {
-            if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-                flipFlopTimer.stop();
-            } else {
-                Logger.warn(tag, "Beacon receiver stop failed (adapter={},enabled={})", bluetoothAdapter != null, (bluetoothAdapter != null && bluetoothAdapter.isEnabled()));
-            }
             started = false;
+            if (flipFlopTimer.isStarted()) {
+                flipFlopTimer.stop();
+            }
+            try {
+                bluetoothLeScanner.stopScan(scanCallback);
+            } catch (Throwable e) {
+            }
             broadcast(l -> l.stop());
             Logger.debug(tag, "Beacon receiver stopped");
         } else {
@@ -213,6 +247,11 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     @Override
     public boolean isStarted() {
         return started;
+    }
+
+    @Override
+    public boolean isSupported() {
+        return bluetoothLeScanner != null;
     }
 
     @Override

@@ -8,7 +8,7 @@ public class BeaconListener {
     public void start() {
     }
 
-    public void startFailed(int errorCode) {
+    public void error(int errorCode) {
     }
 
     public void stop() {

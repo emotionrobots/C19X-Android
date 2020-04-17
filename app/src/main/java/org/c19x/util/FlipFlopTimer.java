@@ -17,39 +17,40 @@ public class FlipFlopTimer {
 
     public FlipFlopTimer(int onDuration, int offDuration, Runnable onToOffAction, Runnable offToOnAction) {
         this.handler = new Handler(Looper.getMainLooper());
+
         this.onDuration = onDuration;
         this.offDuration = offDuration;
         this.onToOffAction = onToOffAction;
         this.offToOnAction = offToOnAction;
         this.onToOffActionWrapper = () -> {
-            Logger.debug(tag, "Switching from ON to OFF (onDuration={},offDuration={})", onDuration, offDuration);
+            Logger.debug(tag, "Switching from ON to OFF (onDuration={},offDuration={})", getOnDuration(), getOffDuration());
             onToOffAction.run();
             if (isActive) {
-                handler.postDelayed(offToOnActionWrapper, offDuration);
+                handler.postDelayed(offToOnActionWrapper, getOffDuration());
             }
         };
         this.offToOnActionWrapper = () -> {
-            Logger.debug(tag, "Switching from OFF to ON (onDuration={},offDuration={})", onDuration, offDuration);
+            Logger.debug(tag, "Switching from OFF to ON (onDuration={},offDuration={})", getOnDuration(), getOffDuration());
             offToOnAction.run();
             if (isActive) {
-                handler.postDelayed(onToOffActionWrapper, onDuration);
+                handler.postDelayed(onToOffActionWrapper, getOnDuration());
             }
         };
     }
 
-    public int getOnDuration() {
+    public synchronized int getOnDuration() {
         return onDuration;
     }
 
-    public void setOnDuration(int onDuration) {
+    public synchronized void setOnDuration(int onDuration) {
         this.onDuration = onDuration;
     }
 
-    public int getOffDuration() {
+    public synchronized int getOffDuration() {
         return offDuration;
     }
 
-    public void setOffDuration(int offDuration) {
+    public synchronized void setOffDuration(int offDuration) {
         this.offDuration = offDuration;
     }
 
@@ -59,11 +60,16 @@ public class FlipFlopTimer {
         offToOnActionWrapper.run();
     }
 
+    public boolean isStarted() {
+        return isActive;
+    }
+
     public void stop() {
         isActive = false;
         handler.removeCallbacks(offToOnActionWrapper);
         handler.removeCallbacks(onToOffActionWrapper);
-        onToOffActionWrapper.run();
+        handler.removeCallbacksAndMessages(null);
+        onToOffAction.run();
         Logger.debug(tag, "Stopped flip flop (onDuration={},offDuration={})", onDuration, offDuration);
     }
 

@@ -1,19 +1,13 @@
 package org.c19x.gui;
 
 import android.app.Activity;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.View;
 import android.widget.RadioButton;
 import android.widget.TextView;
-
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
@@ -25,35 +19,13 @@ import org.c19x.data.PersonalMessage;
 import org.c19x.logic.RiskAnalysisListener;
 import org.c19x.logic.RiskFactors;
 import org.c19x.util.Logger;
-import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
 
 /**
  * Minimalist app user interface for simplicity and usability
  */
 public class MainActivity extends Activity {
     private final static String tag = MainActivity.class.getName();
-    private final static int notificationChannelId = 1;
-    private String notificationText = null;
-
-    // Bluetooth state listener used by startBeacon and stopBeacon
-    private BluetoothStateMonitorListener bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
-
-        @Override
-        public void enabled() {
-            Logger.debug(tag, "Bluetooth is turned on, starting beacon");
-            if (C19XApplication.getDeviceRegistration().isRegistered()) {
-                C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
-            }
-            C19XApplication.getBeaconReceiver().start();
-        }
-
-        @Override
-        public void disabling() {
-            Logger.debug(tag, "Bluetooth is turning off, stopping beacon");
-            C19XApplication.getBeaconTransmitter().stop();
-            C19XApplication.getBeaconReceiver().stop();
-        }
-    };
+    private PowerManager.WakeLock wakeLock;
 
     // Beacon listener used by startBeacon and stopBeacon to update UI on state change.
     private BeaconListener beaconListener;
@@ -107,6 +79,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         C19XApplication.registerOnCreate(this);
+        wakeLock = ActivityUtil.getWakeLock(this);
 
         // Setup app UI
         ActivityUtil.setFullscreen(this);
@@ -136,9 +109,13 @@ public class MainActivity extends Activity {
         // Stop monitoring bluetooth state
         unregisterBluetoothBeaconListeners();
 
-        setNotification(null);
+        ActivityUtil.setNotification(this, null);
 
         C19XApplication.unregisterOnDestroy(this);
+
+        if (wakeLock != null) {
+            wakeLock.release();
+        }
         super.onDestroy();
     }
 
@@ -163,7 +140,7 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void startFailed(int errorCode) {
+            public void error(int errorCode) {
                 update();
             }
 
@@ -194,7 +171,6 @@ public class MainActivity extends Activity {
         };
         C19XApplication.getBeaconTransmitter().addListener(beaconListener);
         C19XApplication.getBeaconReceiver().addListener(beaconListener);
-        C19XApplication.getBluetoothStateMonitor().addListener(bluetoothStateMonitorListener);
     }
 
     /**
@@ -204,11 +180,8 @@ public class MainActivity extends Activity {
         if (beaconListener == null) {
             return;
         }
-        C19XApplication.getBluetoothStateMonitor().removeListener(bluetoothStateMonitorListener);
         C19XApplication.getBeaconTransmitter().removeListener(beaconListener);
         C19XApplication.getBeaconReceiver().removeListener(beaconListener);
-
-        bluetoothStateMonitorListener = null;
         beaconListener = null;
     }
 
@@ -221,7 +194,6 @@ public class MainActivity extends Activity {
         setHealthStatus(C19XApplication.getHealthStatus().getStatus());
         setContactStatus(C19XApplication.getRiskAnalysis().getContact());
         setAdviceStatus(C19XApplication.getRiskAnalysis().getAdvice());
-        setNotification(getString(R.string.app_notification));
         setNewsFeedBasedOnRiskAnalysis();
     }
 
@@ -232,10 +204,7 @@ public class MainActivity extends Activity {
      */
     public void updateBeacon(View view) {
         Logger.debug(tag, "Beacon transmitter change identity requested manually");
-        if (C19XApplication.getBeaconTransmitter().isStarted() && C19XApplication.getDeviceRegistration().isRegistered()) {
-            C19XApplication.getBeaconTransmitter().stop();
-            C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
-        }
+        C19XApplication.getBeaconTransmitter().setId(C19XApplication.getAliasIdentifier());
     }
 
     /**
@@ -407,7 +376,7 @@ public class MainActivity extends Activity {
                 option.setText(R.string.contact_status_option_infectious);
                 option.setBackgroundResource(R.color.colorRed);
                 if (C19XApplication.getRiskAnalysis().getAdvice() != HealthStatus.SELF_ISOLATION) {
-                    setNotification(getString(R.string.contact_status_option_infectious_notification));
+                    ActivityUtil.setNotification(this, getString(R.string.contact_status_option_infectious_notification));
                 }
                 break;
             }
@@ -435,7 +404,7 @@ public class MainActivity extends Activity {
             case HealthStatus.SELF_ISOLATION: {
                 option.setText(R.string.advice_status_option_self_isolation);
                 option.setBackgroundResource(R.color.colorRed);
-                setNotification(getString(R.string.advice_status_option_self_isolation_notification));
+                ActivityUtil.setNotification(this, getString(R.string.advice_status_option_self_isolation_notification));
                 break;
             }
         }
@@ -540,42 +509,4 @@ public class MainActivity extends Activity {
         }
         newsFeed.setSelected(true);
     }
-
-    /**
-     * Create notification
-     */
-    private final void setNotification(final String text) {
-        Logger.info(tag, "Set notification (existing={},new={})", notificationText, text);
-        final String channelId = getString(R.string.app_fullname);
-        if (text != null) {
-            if (!text.equals(notificationText)) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    int importance = NotificationManager.IMPORTANCE_DEFAULT;
-                    NotificationChannel channel = new NotificationChannel(channelId, channelId, importance);
-                    channel.setDescription("Notification for " + channelId);
-                    NotificationManager notificationManager = getSystemService(NotificationManager.class);
-                    notificationManager.createNotificationChannel(channel);
-                }
-
-                final Intent intent = new Intent(this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                final PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
-
-                final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                        .setSmallIcon(R.drawable.virus)
-                        .setContentTitle(channelId)
-                        .setContentText(text)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-                notificationManager.notify(channelId.hashCode(), builder.build());
-            }
-        } else {
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            notificationManager.deleteNotificationChannel(channelId);
-        }
-        notificationText = text;
-    }
-
 }

@@ -61,8 +61,6 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
 
             @Override
             public void onStartFailure(int errorCode) {
-                started = false;
-                broadcast(l -> l.startFailed(errorCode));
                 switch (errorCode) {
                     case ADVERTISE_FAILED_DATA_TOO_LARGE:
                         Logger.warn(tag, "Beacon transmitter start failed (error=dataTooLarge)");
@@ -83,6 +81,10 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                         Logger.warn(tag, "Beacon transmitter start failed (error=unknown,errorCode={})", errorCode);
                         break;
                 }
+                if (errorCode != ADVERTISE_FAILED_ALREADY_STARTED) {
+                    started = false;
+                }
+                broadcast(l -> l.error(errorCode));
             }
         };
 
@@ -129,7 +131,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                         final long id = byteBuffer.getLong(0);
                         final int rssi = byteBuffer.getInt(Long.BYTES);
-                        Logger.debug(tag, "Beacon transmitter GATT server received write request (timestamp={},id={},rssi={},data={})", timestamp, id, rssi);
+                        Logger.debug(tag, "Beacon transmitter GATT server received write request (timestamp={},id={},rssi={})", timestamp, id, rssi);
                         broadcast(l -> l.detect(timestamp, id, rssi));
                     }
                 }
@@ -146,7 +148,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                 }
             } else {
                 started = false;
-                broadcast(l -> l.startFailed(AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
+                broadcast(l -> l.error(AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
             }
         } else {
             Logger.warn(tag, "Beacon transmitter already started");
@@ -192,12 +194,18 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     }
 
     @Override
+    public boolean isSupported() {
+        return bluetoothLeAdvertiser != null;
+    }
+
+    @Override
     public synchronized long getId() {
         return id;
     }
 
     @Override
     public synchronized void setId(final long id) {
+        Logger.debug(tag, "Beacon transmitter set ID (id={},started={})", id, started);
         final boolean state = started;
         if (started) {
             stop();

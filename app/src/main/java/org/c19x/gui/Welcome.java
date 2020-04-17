@@ -5,7 +5,10 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.CheckBox;
 
 import androidx.annotation.NonNull;
@@ -19,21 +22,20 @@ import org.c19x.data.DeviceRegistrationListener;
 import org.c19x.data.GlobalStatusLogListener;
 import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.network.response.NetworkResponse;
+import org.c19x.service.BeaconService;
 import org.c19x.util.Logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Welcome extends Activity {
     private final static String tag = Welcome.class.getName();
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final static int requestBluetooth = 1;
     private final static int requestLocation = 2;
 
     private final AtomicBoolean bluetoothPermissionComplete = new AtomicBoolean(false);
     private final AtomicBoolean locationPermissionComplete = new AtomicBoolean(false);
-    private final AtomicBoolean deviceRegistrationComplete = new AtomicBoolean(false);
-    private final AtomicBoolean bluetoothBeaconComplete = new AtomicBoolean(false);
-    private final AtomicBoolean dataDownloadComplete = new AtomicBoolean(false);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,19 +45,28 @@ public class Welcome extends Activity {
         ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_welcome);
 
+        ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
+                () -> startApp(),
+                () -> finish());
+
+    }
+
+    private final void startApp() {
+        final Runnable checkProgressTask = new Runnable() {
+            @Override
+            public void run() {
+                if (!checkProgress()) {
+                    handler.postDelayed(this, 1000);
+                }
+            }
+        };
+        checkProgressTask.run();
+
         if (C19XApplication.getDeviceRegistration().isRegistered()) {
             // Fast track startup if device is already registered
-            {
-                // Device already registered
-                deviceRegistrationComplete.set(true);
-                final CheckBox checkBox = (CheckBox) findViewById(R.id.welcome_progress_id);
-                checkBox.setChecked(true);
-                checkBox.setTextColor(getResources().getColor(R.color.colorGreen, null));
-            }
-            {
-                // Download data update in background later
-                dataDownloadComplete.set(true);
-            }
+            final CheckBox checkBox = (CheckBox) findViewById(R.id.welcome_progress_id);
+            checkBox.setChecked(true);
+            checkBox.setTextColor(getResources().getColor(R.color.colorGreen, null));
             startBluetoothLocationBeacon();
         } else {
             // Check connection with server
@@ -98,13 +109,34 @@ public class Welcome extends Activity {
     /**
      * Check overall progress, then move forward to main activity
      */
-    private final synchronized void checkProgress() {
-        Logger.debug(tag, "Progress (registration={},bluetooth={},data={},locationPermission={},bluetoothPermission={})", deviceRegistrationComplete, bluetoothBeaconComplete, dataDownloadComplete, locationPermissionComplete, bluetoothPermissionComplete);
-        if (deviceRegistrationComplete.get() && bluetoothBeaconComplete.get() && dataDownloadComplete.get() && locationPermissionComplete.get() && bluetoothPermissionComplete.get()) {
+    private final synchronized boolean checkProgress() {
+        final boolean deviceRegistrationComplete =
+                C19XApplication.getDeviceRegistration().isRegistered();
+        final boolean bluetoothBeaconComplete =
+                (!C19XApplication.getBeaconTransmitter().isSupported() || (C19XApplication.getBeaconTransmitter().isSupported() && C19XApplication.getBeaconTransmitter().isStarted())) &&
+                        (!C19XApplication.getBeaconReceiver().isSupported() || (C19XApplication.getBeaconReceiver().isSupported() && C19XApplication.getBeaconReceiver().isStarted()));
+        final boolean dataDownloadComplete =
+                C19XApplication.getGlobalStatusLog().getTimestamp() > 0;
+
+        Logger.debug(tag, "Progress (registration={},bluetooth={}[TX={}|{},RX={}|{}],data={},locationPermission={},bluetoothPermission={})",
+                deviceRegistrationComplete,
+                bluetoothBeaconComplete,
+                C19XApplication.getBeaconTransmitter().isSupported(),
+                C19XApplication.getBeaconTransmitter().isStarted(),
+                C19XApplication.getBeaconReceiver().isSupported(),
+                C19XApplication.getBeaconReceiver().isStarted(),
+                dataDownloadComplete, locationPermissionComplete, bluetoothPermissionComplete);
+        if (deviceRegistrationComplete &&
+                bluetoothBeaconComplete &&
+                dataDownloadComplete &&
+                locationPermissionComplete.get() &&
+                bluetoothPermissionComplete.get()) {
             final Intent intent = new Intent(this, MainActivity.class);
             // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
+            return true;
         }
+        return false;
     }
 
     // DEVICE REGISTRATION
@@ -122,9 +154,7 @@ public class Welcome extends Activity {
                 startDataDownload();
                 startBluetoothLocationBeacon();
 
-                deviceRegistrationComplete.set(true);
                 C19XApplication.getDeviceRegistration().removeListener(this);
-                checkProgress();
             }
         };
 
@@ -150,10 +180,7 @@ public class Welcome extends Activity {
                 final CheckBox checkBox = (CheckBox) findViewById(R.id.welcome_progress_data);
                 checkBox.setChecked(success);
                 checkBox.setTextColor(getResources().getColor(success ? R.color.colorGreen : R.color.colorRed, null));
-
-                dataDownloadComplete.set(true);
                 C19XApplication.getGlobalStatusLog().removeListener(this);
-                checkProgress();
             }
         };
 
@@ -173,17 +200,12 @@ public class Welcome extends Activity {
      * Start bluetooth location beacon transmitter and receiver
      */
     private final void startBluetoothLocationBeacon() {
-        final AtomicBoolean transmitterStarted = new AtomicBoolean(false);
-        final AtomicBoolean transmitterChecked = new AtomicBoolean(false);
-        final AtomicBoolean receiverStarted = new AtomicBoolean(false);
-        final AtomicBoolean receiverChecked = new AtomicBoolean(false);
-
         // Update GUI
         final Runnable uiUpdate = new Runnable() {
             @Override
-            public void run() {
-                final boolean transmitter = transmitterStarted.get();
-                final boolean receiver = receiverStarted.get();
+            public synchronized void run() {
+                final boolean transmitter = C19XApplication.getBeaconTransmitter().isStarted();
+                final boolean receiver = C19XApplication.getBeaconReceiver().isStarted();
                 Logger.debug(tag, "Beacon status update (transmitter={},receiver={})", transmitter, receiver);
                 final CheckBox checkBox = (CheckBox) findViewById(R.id.welcome_progress_beacon);
                 checkBox.setChecked(transmitter || receiver);
@@ -195,56 +217,33 @@ public class Welcome extends Activity {
                     statusColor = R.color.colorGreen;
                 }
                 checkBox.setTextColor(getResources().getColor(statusColor, null));
-                if (transmitterChecked.get() && receiverChecked.get()) {
-                    Logger.debug(tag, "Beacon transmitter and receiver check completed (transmitter={},receiver={})", transmitter, receiver);
-                    bluetoothBeaconComplete.set(true);
-                    checkProgress();
-                }
             }
         };
 
-        final BeaconListener transmitterListener = new BeaconListener() {
+        final BeaconListener beaconListener = new BeaconListener() {
             @Override
             public void start() {
-                transmitterStarted.set(true);
-                checked();
+                uiUpdate.run();
             }
 
             @Override
-            public void startFailed(int errorCode) {
-                transmitterStarted.set(false);
-                checked();
+            public void error(int errorCode) {
+                uiUpdate.run();
             }
 
-            private final void checked() {
-                C19XApplication.getBeaconTransmitter().removeListener(this);
-                transmitterChecked.set(true);
+            @Override
+            public void stop() {
+                uiUpdate.run();
+            }
+
+            @Override
+            public void detect(long timestamp, long id, float rssi) {
                 uiUpdate.run();
             }
         };
 
-        final BeaconListener receiverListener = new BeaconListener() {
-            @Override
-            public void start() {
-                receiverStarted.set(true);
-                checked();
-            }
-
-            @Override
-            public void startFailed(int errorCode) {
-                receiverStarted.set(false);
-                checked();
-            }
-
-            private final void checked() {
-                C19XApplication.getBeaconReceiver().removeListener(this);
-                receiverChecked.set(true);
-                uiUpdate.run();
-            }
-        };
-
-        C19XApplication.getBeaconTransmitter().addListener(transmitterListener);
-        C19XApplication.getBeaconReceiver().addListener(receiverListener);
+        C19XApplication.getBeaconTransmitter().addListener(beaconListener);
+        C19XApplication.getBeaconReceiver().addListener(beaconListener);
         checkBluetoothAndLocationPermissions();
     }
 
@@ -291,13 +290,18 @@ public class Welcome extends Activity {
 
     private synchronized void checkPermissionRequestResult() {
         if (locationPermissionComplete.get() && bluetoothPermissionComplete.get()) {
-            if (!C19XApplication.getBeaconTransmitter().isStarted()) {
-                Logger.debug(tag, "Starting bluetooth location beacon transmitter");
-                C19XApplication.getBeaconTransmitter().start(C19XApplication.getAliasIdentifier());
-            }
-            if (!C19XApplication.getBeaconReceiver().isStarted()) {
-                Logger.debug(tag, "Starting bluetooth location beacon receiver");
-                C19XApplication.getBeaconReceiver().start();
+            // Start bluetooth as service
+            Logger.info(tag, "Starting beacon service");
+            final Intent intent = new Intent(this, BeaconService.class);
+            intent.putExtra(BeaconService.keyId, C19XApplication.getAliasIdentifier());
+            intent.putExtra(BeaconService.keyOnDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOnDuration());
+            intent.putExtra(BeaconService.keyOffDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOffDuration());
+            intent.putExtra(BeaconService.keyActive, true);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
             }
         }
     }
@@ -310,7 +314,6 @@ public class Welcome extends Activity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 locationPermissionComplete.set(true);
                 checkPermissionRequestResult();
-                checkProgress();
             } else {
                 ActivityUtil.showDialog(this,
                         R.string.dialog_welcome_permission_location_title,
@@ -327,7 +330,6 @@ public class Welcome extends Activity {
             if (resultCode != RESULT_CANCELED) {
                 bluetoothPermissionComplete.set(true);
                 checkPermissionRequestResult();
-                checkProgress();
             } else {
                 ActivityUtil.showDialog(this,
                         R.string.dialog_welcome_permission_bluetooth_title,

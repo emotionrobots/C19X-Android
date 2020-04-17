@@ -25,6 +25,13 @@ public interface BeaconReceiver extends Broadcaster<BeaconListener> {
     boolean isStarted();
 
     /**
+     * Check if capability is supported
+     *
+     * @return
+     */
+    boolean isSupported();
+
+    /**
      * Set duty cycle of receiver, on for how long, and off for how long.
      *
      * @param onDuration  On duration in millis.

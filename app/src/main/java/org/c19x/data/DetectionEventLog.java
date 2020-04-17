@@ -51,7 +51,7 @@ public class DetectionEventLog extends BeaconListener {
     private final Lock logLock = new ReentrantLock(true);
 
     // Backup log once every 20 minutes
-    private final static long automaticLogBackupTaskScheduleMillis = (C19XApplication.testMode ? 10000 : 20 * 60 * 1000);
+    private final static long automaticLogBackupTaskScheduleMillis = 20 * 60 * 1000;
     private TimerTask complyWithRetentionPeriodTask = null;
 
 
@@ -254,7 +254,7 @@ public class DetectionEventLog extends BeaconListener {
                     totalContactDuration.value += contactDuration;
                     // Update last timestamp for testing next encounter
                     lastTimestamp.value = timestamp;
-                    Logger.debug(tag, "Detection event logged as contact episode (timestamp={},id={},rssi={},contactDuration={},totalDuration={})", timestamp, identifier, rssi, contactDuration, totalContactDuration.value);
+                    Logger.debug(tag, "Detection event logged as contact episode (timestamp={},ownId={},id={},rssi={},contactDuration={},totalDuration={})", timestamp, C19XApplication.getBeaconTransmitter().getId(), identifier, rssi, contactDuration, totalContactDuration.value);
                 } else {
                     // Separate instances of close encounter, just remember timestamp
                     lastTimestamp.value = timestamp;
