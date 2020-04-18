@@ -132,11 +132,11 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                         final long id = byteBuffer.getLong(0);
                         final int rssi = byteBuffer.getInt(Long.BYTES);
-                        Logger.debug(tag, "Beacon transmitter GATT server received write request (timestamp={},id={},rssi={})", timestamp, id, rssi);
-                        broadcast(l -> l.detect(timestamp, id, rssi));
+                        Logger.debug(tag, "Beacon transmitter received echo data from receiver (timestamp={},id={},rssi={})", timestamp, id, rssi);
                         if (responseNeeded) {
                             bluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);
                         }
+                        broadcast(l -> l.detect(timestamp, id, rssi));
                     }
                 }
             };

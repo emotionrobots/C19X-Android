@@ -20,11 +20,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
+import static android.bluetooth.le.ScanCallback.SCAN_FAILED_ALREADY_STARTED;
+
 public class BeaconService extends IntentService {
     private final static String tag = BeaconService.class.getName();
     public final static String keyId = "id";
-    public final static String keyOnDuration = "onDuration";
-    public final static String keyOffDuration = "offDuration";
+    public final static String keyReceiverOnDuration = "receiverOnDuration";
+    public final static String keyReceiverOffDuration = "receiverOffDuration";
     public final static String keyActive = "active";
 
     private final boolean transmitterIsSupported;
@@ -103,7 +106,9 @@ public class BeaconService extends IntentService {
         @Override
         public void error(int errorCode) {
             Logger.warn(tag, "Beacon error (errorCode={},errorHandling={})", errorCode, errorHandling);
-            if (errorHandling.compareAndSet(false, true)) {
+            if (errorCode != ADVERTISE_FAILED_ALREADY_STARTED &&
+                    errorCode != SCAN_FAILED_ALREADY_STARTED &&
+                    errorHandling.compareAndSet(false, true)) {
                 Logger.debug(tag, "Beacon error recovery, attempting to power cycle Bluetooth to repair beacon");
                 C19XApplication.getBluetoothStateMonitor().addListener(onToOffListener);
                 C19XApplication.getBluetoothStateMonitor().getBluetoothAdapter().disable();
@@ -167,8 +172,8 @@ public class BeaconService extends IntentService {
     protected void onHandleIntent(@Nullable Intent intent) {
         Logger.debug(tag, "Beacon service handle intent (intent={})", intent);
         id.set(intent.getLongExtra(keyId, C19XApplication.getAliasIdentifier()));
-        onDuration.set(intent.getIntExtra(keyOnDuration, 15000));
-        offDuration.set(intent.getIntExtra(keyOffDuration, 85000));
+        onDuration.set(intent.getIntExtra(keyReceiverOnDuration, 15000));
+        offDuration.set(intent.getIntExtra(keyReceiverOffDuration, 85000));
         final boolean active = intent.getBooleanExtra(keyActive, true);
         Logger.debug(tag, "Beacon service command (id={},onDuration={},offDuration={},active={})", id, onDuration, offDuration, active);
 

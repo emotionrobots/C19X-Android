@@ -113,13 +113,13 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
             BluetoothGattService c19xBeaconService = null;
             for (BluetoothGattService bluetoothGattService : gatt.getServices()) {
                 final boolean match = (bluetoothGattService.getUuid().getMostSignificantBits() == C19XApplication.bluetoothLeServiceId);
-                // Logger.debug(tag, "Beacon receiver discovered service (service={},match={})", bluetoothGattService.getUuid(), match);
+                //Logger.debug(tag, "Beacon receiver discovered service (service={},match={})", bluetoothGattService.getUuid(), match);
                 if (match) {
                     c19xBeaconService = bluetoothGattService;
                 }
             }
             if (c19xBeaconService != null) {
-                // Logger.debug(tag, "Beacon receiver discovered C19X beacon service");
+                //Logger.debug(tag, "Beacon receiver discovered C19X beacon service");
                 BluetoothGattCharacteristic c19xBeaconServiceCharacteristic = null;
                 for (BluetoothGattCharacteristic bluetoothGattCharacteristic : c19xBeaconService.getCharacteristics()) {
                     final boolean match = (bluetoothGattCharacteristic.getUuid().getMostSignificantBits() == C19XApplication.bluetoothLeServiceId);
@@ -129,7 +129,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                     }
                 }
                 if (c19xBeaconServiceCharacteristic != null) {
-                    Logger.debug(tag, "Beacon receiver writing C19X beacon service characteristic (id={},rssi={})", id, rssi);
+                    //Logger.debug(tag, "Beacon receiver sending echo data to transmitter (id={},rssi={})", id, rssi);
                     c19xBeaconServiceCharacteristic.setValue(data);
                     gatt.writeCharacteristic(c19xBeaconServiceCharacteristic);
                 }
@@ -139,7 +139,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicWrite(gatt, characteristic, status);
-            Logger.debug(tag, "Beacon receiver wrote C19X beacon service characteristic (id={},rssi={})", id, rssi);
+            Logger.debug(tag, "Beacon receiver sent echo data to transmitter (id={},rssi={},success={})", id, rssi, (status == BluetoothGatt.GATT_SUCCESS));
             gatt.close();
         }
     }
@@ -159,7 +159,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         } else {
             Logger.debug(tag, "Bluetooth LE scanner is supported");
         }
-        this.flipFlopTimer = new FlipFlopTimer(5000, 10000,
+        this.flipFlopTimer = new FlipFlopTimer(5000, 3000,
                 () -> {
                     Logger.debug(tag, "Beacon receiver starting BLE scanner");
                     if (bluetoothAdapter != null && bluetoothAdapter.isEnabled() && bluetoothLeScanner != null && started) {

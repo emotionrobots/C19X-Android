@@ -47,9 +47,11 @@ public class Welcome extends Activity {
         ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_welcome);
 
-        ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
-                () -> startApp(),
-                () -> finish());
+//        ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
+//                () -> startApp(),
+//                () -> finish());
+
+        startApp();
     }
 
     private final void startApp() {
@@ -298,8 +300,8 @@ public class Welcome extends Activity {
             Logger.info(tag, "Starting beacon service");
             final Intent intent = new Intent(this, BeaconService.class);
             intent.putExtra(BeaconService.keyId, C19XApplication.getAliasIdentifier());
-            intent.putExtra(BeaconService.keyOnDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOnDuration());
-            intent.putExtra(BeaconService.keyOffDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOffDuration());
+            intent.putExtra(BeaconService.keyReceiverOnDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOnDuration());
+            intent.putExtra(BeaconService.keyReceiverOffDuration, C19XApplication.getGlobalStatusLog().getBeaconReceiverOffDuration());
             intent.putExtra(BeaconService.keyActive, true);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

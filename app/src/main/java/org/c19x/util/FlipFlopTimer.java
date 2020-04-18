@@ -7,15 +7,15 @@ import android.os.Looper;
 public class FlipFlopTimer {
     private final static String tag = FlipFlopTimer.class.getName();
     private final Handler handler;
-    private int onDuration = 1000;
-    private int offDuration = 2000;
+    private int onDuration = 5000;
+    private int offDuration = 3000;
     private Runnable onToOffAction;
     private Runnable offToOnAction;
     private Runnable onToOffActionWrapper;
     private Runnable offToOnActionWrapper;
     private boolean isActive = false;
 
-    public FlipFlopTimer(int onDuration, int offDuration, Runnable onToOffAction, Runnable offToOnAction) {
+    public FlipFlopTimer(int onDuration, int offDuration, Runnable offToOnAction, Runnable onToOffAction) {
         this.handler = new Handler(Looper.getMainLooper());
 
         this.onDuration = onDuration;
