@@ -14,8 +14,8 @@ import android.util.Base64;
 
 import org.c19x.beacon.BeaconReceiver;
 import org.c19x.beacon.BeaconTransmitter;
-import org.c19x.beacon.ble2.BLEReceiver;
-import org.c19x.beacon.ble2.BLETransmitter;
+import org.c19x.beacon.ble3.BLEReceiver;
+import org.c19x.beacon.ble3.BLETransmitter;
 import org.c19x.data.DetectionEventLog;
 import org.c19x.data.DeviceRegistration;
 import org.c19x.data.GlobalStatusLog;
