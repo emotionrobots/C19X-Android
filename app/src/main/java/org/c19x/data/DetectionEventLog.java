@@ -57,7 +57,7 @@ public class DetectionEventLog extends BeaconListener {
 
     public DetectionEventLog() {
         // Load data from internal storage
-        restoreFromFile();
+        //restoreFromFile();
         // Start rolling log automatic deletion process
         setRetentionPeriod(retentionPeriodDays);
         // Start rolling log automatic backup process

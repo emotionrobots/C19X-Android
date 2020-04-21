@@ -25,17 +25,24 @@ import org.c19x.util.messaging.DefaultBroadcaster;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE;
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED;
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR;
+import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS;
+
 /**
  * Bluetooth low energy transmitter that is compatible with iOS and Android.
  */
 public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implements BeaconTransmitter {
-    private final static String tag = BLETransmitter.class.getName();
     public final static long bleServiceId = 9803801938501395l;
+    private final static String tag = BLETransmitter.class.getName();
     private final BluetoothManager bluetoothManager;
     private final BluetoothAdapter bluetoothAdapter;
     private final BluetoothLeAdvertiser bluetoothLeAdvertiser;
@@ -43,110 +50,6 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     private final AtomicReference<BluetoothGattServer> bluetoothGattServer = new AtomicReference<>(null);
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicLong beaconCode = new AtomicLong(0);
-
-
-    private final static AdvertiseSettings getAdvertiseSettings() {
-        return new AdvertiseSettings.Builder()
-                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-                .setConnectable(true)
-                .build();
-    }
-
-    private final static AdvertiseData getAdvertiseData(final BluetoothGattService bluetoothGattService) {
-        return new AdvertiseData.Builder()
-                .setIncludeDeviceName(false)
-                .setIncludeTxPowerLevel(false)
-                .addServiceUuid(new ParcelUuid(bluetoothGattService.getUuid()))
-                .build();
-    }
-
-    private final static AdvertiseCallback getAdvertiseCallback(final Broadcaster<BeaconListener> broadcaster, final AtomicBoolean started) {
-        return new AdvertiseCallback() {
-            @Override
-            public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-                started.set(true);
-                broadcaster.broadcast(l -> l.start());
-                Logger.debug(tag, "Beacon transmitter started");
-            }
-
-            @Override
-            public void onStartFailure(int errorCode) {
-                switch (errorCode) {
-                    case ADVERTISE_FAILED_DATA_TOO_LARGE:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=dataTooLarge)");
-                        break;
-                    case ADVERTISE_FAILED_TOO_MANY_ADVERTISERS:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=tooManyAdvertisers)");
-                        break;
-                    case ADVERTISE_FAILED_ALREADY_STARTED:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=alreadyStarted)");
-                        break;
-                    case ADVERTISE_FAILED_INTERNAL_ERROR:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=internalError)");
-                        break;
-                    case ADVERTISE_FAILED_FEATURE_UNSUPPORTED:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=featureUnsupported)");
-                        break;
-                    default:
-                        Logger.warn(tag, "Beacon transmitter start failed (error=unknown,errorCode={})", errorCode);
-                        break;
-                }
-                if (errorCode != ADVERTISE_FAILED_ALREADY_STARTED) {
-                    started.set(false);
-                }
-                broadcaster.broadcast(l -> l.error(errorCode));
-            }
-        };
-    }
-
-    private final static BluetoothGattService getBluetoothGattService(final long serviceID, final long beaconCode) {
-        // Service UUID = serviceID (upper 64) + 0 (lower 64)
-        final BluetoothGattService bluetoothGattService = new BluetoothGattService(new UUID(serviceID, 0), BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        // Characteristic UUID = serviceID (upper 64) + beaconCode (lower 64)
-        // Data = receiverBeaconCode (8 bytes long) + rssi (4 bytes int)
-        final BluetoothGattCharacteristic bluetoothGattCharacteristic = new BluetoothGattCharacteristic(
-                new UUID(serviceID, beaconCode),
-                BluetoothGattCharacteristic.PROPERTY_WRITE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE);
-        bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-        bluetoothGattService.addCharacteristic(bluetoothGattCharacteristic);
-        Logger.debug(tag, "Created GATT service (serviceId={},beaconCode={},serviceUuid={},characteristicUuid={})",
-                serviceID, beaconCode,
-                bluetoothGattService.getUuid(),
-                bluetoothGattCharacteristic.getUuid());
-        return bluetoothGattService;
-    }
-
-    private final static BluetoothGattServerCallback getBluetoothGattServerCallback(final Broadcaster<BeaconListener> broadcaster, final long serviceID, final AtomicReference<BluetoothGattServer> bluetoothGattServer) {
-        return new BluetoothGattServerCallback() {
-            @Override
-            public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
-                super.onConnectionStateChange(device, status, newState);
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Logger.debug(tag, "Client connected to GATT server");
-                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Logger.debug(tag, "Client disconnected from GATT server");
-                }
-            }
-
-            @Override
-            public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
-                if (characteristic.getUuid().getMostSignificantBits() == serviceID) {
-                    final ByteBuffer byteBuffer = ByteBuffer.wrap(value);
-                    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-                    final long id = byteBuffer.getLong(0);
-                    final int rssi = byteBuffer.getInt(Long.BYTES);
-                    final long timestamp = C19XApplication.getTimestamp().getTime();
-                    Logger.debug(tag, "GATT service received echo data (id={},rssi={},timestamp={})", id, rssi, timestamp);
-                    if (responseNeeded) {
-                        bluetoothGattServer.get().sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);
-                    }
-                    broadcaster.broadcast(l -> l.detect(timestamp, id, rssi));
-                }
-            }
-        };
-
-    }
 
 
     public BLETransmitter() {
@@ -161,27 +64,165 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
         }
     }
 
+    private final static AdvertiseCallback startAdvertising(final BluetoothLeAdvertiser bluetoothLeAdvertiser, final long serviceId, final long beaconCode, final Broadcaster<BeaconListener> broadcaster, final AtomicBoolean started) {
+        final AdvertiseSettings settings = new AdvertiseSettings.Builder()
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
+                .setConnectable(true)
+                .setTimeout(0)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
+                .build();
+
+        final AdvertiseData data = new AdvertiseData.Builder()
+                .setIncludeDeviceName(false)
+                .setIncludeTxPowerLevel(false)
+                .addServiceUuid(new ParcelUuid(new UUID(serviceId, 0)))
+                .build();
+
+        final AdvertiseCallback callback = new AdvertiseCallback() {
+            @Override
+            public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+                Logger.debug(tag, "Advertising start success (settings={})", settingsInEffect);
+                started.set(true);
+                broadcaster.broadcast(l -> l.start());
+            }
+
+            @Override
+            public void onStartFailure(int errorCode) {
+                Logger.warn(tag, "Advertising start failure (error={})", onStartFailureErrorCodeToString(errorCode));
+                if (errorCode != ADVERTISE_FAILED_ALREADY_STARTED) {
+                    started.set(false);
+                }
+                broadcaster.broadcast(l -> l.error(errorCode));
+            }
+        };
+
+        bluetoothLeAdvertiser.startAdvertising(settings, data, callback);
+        return callback;
+    }
+
+    private final static void stopAdvertising(final BluetoothLeAdvertiser bluetoothLeAdvertiser, final AdvertiseCallback advertiseCallback) {
+        bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
+        Logger.debug(tag, "Advertising stopped");
+    }
+
+    private final static BluetoothGattServer startGattServer(final BluetoothManager bluetoothManager, final long serviceId, final Broadcaster<BeaconListener> broadcaster) {
+        // Data = receiverBeaconCode (8 bytes long) + rssi (4 bytes int)
+        final AtomicReference<BluetoothGattServer> server = new AtomicReference<>(null);
+        final BluetoothGattServerCallback callback = new BluetoothGattServerCallback() {
+            @Override
+            public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
+                Logger.debug(tag, "GATT server connection state change (device={},status={},newState={})",
+                        device, status, onConnectionStateChangeStatusToString(newState));
+            }
+
+            @Override
+            public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
+                Logger.debug(tag, "GATT server characteristic write request (device={},responseNeeded={},value={})",
+                        device, responseNeeded, Arrays.toString(value));
+                if (characteristic.getUuid().getMostSignificantBits() == serviceId && value.length == (Long.BYTES + Integer.BYTES)) {
+                    final ByteBuffer byteBuffer = ByteBuffer.wrap(value);
+                    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                    final long id = byteBuffer.getLong(0);
+                    final int rssi = byteBuffer.getInt(Long.BYTES);
+                    final long timestamp = C19XApplication.getTimestamp().getTime();
+                    Logger.debug(tag, "GATT server characteristic received (id={},rssi={},timestamp={})", id, rssi, timestamp);
+                    if (responseNeeded) {
+                        server.get().sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
+                    }
+                    broadcaster.broadcast(l -> l.detect(timestamp, id, rssi));
+                } else {
+                    if (responseNeeded) {
+                        server.get().sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null);
+                    }
+                }
+                server.get().cancelConnection(device);
+            }
+        };
+        server.set(bluetoothManager.openGattServer(C19XApplication.getContext(), callback));
+
+        Logger.debug(tag, "GATT server started (serviceId={})", serviceId);
+        return server.get();
+    }
+
+    private final static void stopGattServer(final BluetoothGattServer bluetoothGattServer) {
+        bluetoothGattServer.close();
+        Logger.debug(tag, "GATT server stopped");
+    }
+
+    private final static void setGattService(final BluetoothManager bluetoothManager, final BluetoothGattServer bluetoothGattServer, final long serviceId, final long beaconCode) {
+        if (bluetoothManager != null && bluetoothGattServer != null) {
+            bluetoothManager.getConnectedDevices(BluetoothProfile.GATT).forEach(device -> bluetoothGattServer.cancelConnection(device));
+            bluetoothManager.getConnectedDevices(BluetoothProfile.GATT_SERVER).forEach(device -> bluetoothGattServer.cancelConnection(device));
+        }
+
+        if (bluetoothGattServer != null) {
+            bluetoothGattServer.clearServices();
+
+            // Service UUID = serviceID (upper 64) + 0 (lower 64)
+            // Characteristic UUID = serviceID (upper 64) + beaconCode (lower 64)
+            final BluetoothGattService service = new BluetoothGattService(new UUID(serviceId, 0), BluetoothGattService.SERVICE_TYPE_PRIMARY);
+
+            final BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
+                    new UUID(serviceId, beaconCode),
+                    BluetoothGattCharacteristic.PROPERTY_WRITE,
+                    BluetoothGattCharacteristic.PERMISSION_WRITE);
+            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+            service.addCharacteristic(characteristic);
+
+            bluetoothGattServer.addService(service);
+            Logger.debug(tag, "GATT service updated (serviceId={},beaconCode={},serviceUUID={},characteristicUUID={})",
+                    serviceId, beaconCode, service.getUuid(), characteristic.getUuid());
+        }
+    }
+
+    private final static String onConnectionStateChangeStatusToString(final int state) {
+        switch (state) {
+            case BluetoothProfile.STATE_CONNECTED:
+                return "STATE_CONNECTED";
+            case BluetoothProfile.STATE_CONNECTING:
+                return "STATE_CONNECTING";
+            case BluetoothProfile.STATE_DISCONNECTING:
+                return "STATE_DISCONNECTING";
+            case BluetoothProfile.STATE_DISCONNECTED:
+                return "STATE_DISCONNECTED";
+            default:
+                return "UNKNOWN_STATE_" + state;
+        }
+    }
+
+    private final static String onStartFailureErrorCodeToString(final int errorCode) {
+        switch (errorCode) {
+            case ADVERTISE_FAILED_DATA_TOO_LARGE:
+                return "ADVERTISE_FAILED_DATA_TOO_LARGE";
+            case ADVERTISE_FAILED_TOO_MANY_ADVERTISERS:
+                return "ADVERTISE_FAILED_TOO_MANY_ADVERTISERS";
+            case ADVERTISE_FAILED_ALREADY_STARTED:
+                return "ADVERTISE_FAILED_ALREADY_STARTED";
+            case ADVERTISE_FAILED_INTERNAL_ERROR:
+                return "ADVERTISE_FAILED_INTERNAL_ERROR";
+            case ADVERTISE_FAILED_FEATURE_UNSUPPORTED:
+                return "ADVERTISE_FAILED_FEATURE_UNSUPPORTED";
+            default:
+                return "UNKNOWN_ERROR_CODE_" + errorCode;
+        }
+    }
+
     @Override
-    public synchronized void start(long id) {
+    public synchronized void start(final long id) {
         if (!started.get()) {
-            this.beaconCode.set(id);
-            if (bluetoothAdapter != null && bluetoothLeAdvertiser != null && bluetoothAdapter.isEnabled()) {
+            beaconCode.set(id);
+            if (bluetoothLeAdvertiser != null && bluetoothAdapter.isEnabled()) {
                 Logger.warn(tag, "Beacon transmitter starting (id={})", id);
                 try {
-                    final BluetoothGattService bluetoothGattService = getBluetoothGattService(bleServiceId, beaconCode.get());
-                    final AdvertiseSettings advertiseSettings = getAdvertiseSettings();
-                    final AdvertiseData advertiseData = getAdvertiseData(bluetoothGattService);
-                    advertiseCallback.set(getAdvertiseCallback(this, started));
-                    final BluetoothGattServerCallback bluetoothGattServerCallback = getBluetoothGattServerCallback(this, bleServiceId, bluetoothGattServer);
-                    bluetoothGattServer.set(bluetoothManager.openGattServer(C19XApplication.getContext(), bluetoothGattServerCallback));
-                    bluetoothGattServer.get().addService(bluetoothGattService);
-                    bluetoothLeAdvertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback.get());
+                    bluetoothGattServer.set(startGattServer(bluetoothManager, bleServiceId, this));
+                    setGattService(bluetoothManager, bluetoothGattServer.get(), bleServiceId, beaconCode.get());
+                    advertiseCallback.set(startAdvertising(bluetoothLeAdvertiser, bleServiceId, beaconCode.get(), this, started));
                 } catch (Throwable e) {
                     Logger.warn(tag, "Beacon transmitter start exception", e);
                 }
             } else {
                 started.set(false);
-                broadcast(l -> l.error(AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
+                broadcast(l -> l.error(ADVERTISE_FAILED_FEATURE_UNSUPPORTED));
             }
         } else {
             Logger.warn(tag, "Beacon transmitter already started");
@@ -195,10 +236,11 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
             Logger.warn(tag, "Beacon transmitter stopping");
             try {
                 if (bluetoothLeAdvertiser != null && advertiseCallback.get() != null) {
-                    bluetoothLeAdvertiser.stopAdvertising(advertiseCallback.get());
+                    stopAdvertising(bluetoothLeAdvertiser, advertiseCallback.get());
                     advertiseCallback.set(null);
                 }
                 if (bluetoothGattServer.get() != null) {
+                    bluetoothGattServer.get().clearServices();
                     bluetoothGattServer.get().close();
                     bluetoothGattServer.set(null);
                 }
@@ -231,13 +273,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
     @Override
     public synchronized void setId(final long id) {
         Logger.debug(tag, "Beacon transmitter set ID (id={},started={})", id, started);
-        final boolean state = started.get();
-        if (state) {
-            stop();
-        }
-        if (state) {
-            start(id);
-        }
         this.beaconCode.set(id);
+        setGattService(bluetoothManager, bluetoothGattServer.get(), bleServiceId, beaconCode.get());
     }
 }

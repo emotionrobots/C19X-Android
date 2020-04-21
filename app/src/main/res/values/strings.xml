@@ -48,6 +48,8 @@
 
     <string name="status_beacon_off">Beacon OFF</string>
     <string name="status_beacon_on">Beacon ON</string>
+    <string name="status_beacon_rx">Receive only</string>
+    <string name="status_beacon_tx">Transmit only</string>
     <string name="status_contact_none">No contact</string>
     <string name="status_data_update_latest">Latest data</string>
     <string name="status_data_update_download">Pending update</string>

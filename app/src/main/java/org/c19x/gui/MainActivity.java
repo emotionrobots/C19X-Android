@@ -162,6 +162,12 @@ public class MainActivity extends Activity {
                     if (!transmitter && !receiver) {
                         textView.setText(R.string.status_beacon_off);
                         textView.setBackgroundResource(R.color.colorRed);
+                    } else if (transmitter && !receiver) {
+                        textView.setText(R.string.status_beacon_tx);
+                        textView.setBackgroundResource(R.color.colorAmber);
+                    } else if (!transmitter && receiver) {
+                        textView.setText(R.string.status_beacon_rx);
+                        textView.setBackgroundResource(R.color.colorAmber);
                     } else {
                         textView.setText(R.string.status_beacon_on);
                         textView.setBackgroundResource(R.color.colorGreen);
@@ -171,6 +177,7 @@ public class MainActivity extends Activity {
         };
         C19XApplication.getBeaconTransmitter().addListener(beaconListener);
         C19XApplication.getBeaconReceiver().addListener(beaconListener);
+        beaconListener.start();
     }
 
     /**
@@ -429,6 +436,8 @@ public class MainActivity extends Activity {
             final int hours = (int) (minutes / 60);
             textView.setText(hours + " hours");
         }
+
+        textView.setText(((riskFactors.closeContactDuration / riskFactors.detectionDays) / 1000) + " seconds");
 
         if (riskFactors.closeContactDuration >= exposureDurationThreshold) {
             textView.setBackgroundResource(R.color.colorAmber);
