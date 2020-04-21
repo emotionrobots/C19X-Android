@@ -166,7 +166,7 @@ public class BLETransmitter extends DefaultBroadcaster<BeaconListener> implement
                     new UUID(serviceId, beaconCode),
                     BluetoothGattCharacteristic.PROPERTY_WRITE,
                     BluetoothGattCharacteristic.PERMISSION_WRITE);
-            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
             service.addCharacteristic(characteristic);
 
             bluetoothGattServer.addService(service);

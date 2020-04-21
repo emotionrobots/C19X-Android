@@ -15,7 +15,6 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.os.ParcelUuid;
-import android.util.SparseArray;
 
 import org.c19x.C19XApplication;
 import org.c19x.beacon.BeaconListener;
@@ -28,7 +27,6 @@ import org.c19x.util.messaging.DefaultBroadcaster;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -55,6 +53,18 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     private final ConcurrentLinkedQueue<ScanResult> scanResults = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final FlipFlopTimer flipFlopTimer;
+
+    private static enum ScanResultType {APPLE_FOREGROUND, APPLE_BACKGROUND, ANDROID}
+
+    private final static class ScanResultForProcessing {
+        public final ScanResultType scanResultType;
+        public final ScanResult scanResult;
+
+        public ScanResultForProcessing(ScanResultType scanResultType, ScanResult scanResult) {
+            this.scanResultType = scanResultType;
+            this.scanResult = scanResult;
+        }
+    }
 
 
     public BLEReceiver() {
@@ -127,39 +137,37 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         final List<ScanResult> scanResultsApple = devices.values().stream()
                 .filter(r -> r.getScanRecord() != null && r.getScanRecord().getManufacturerSpecificData(manufacturerIdForApple) != null)
                 .collect(Collectors.toList());
-        final List<ScanResult> scanResultsAppleBackground = scanResultsApple.stream()
+        final List<ScanResultForProcessing> scanResultsAppleBackground = scanResultsApple.stream()
                 .filter(r -> r.getScanRecord().getServiceUuids() == null || r.getScanRecord().getServiceUuids().size() == 0)
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
+                .map(r -> new ScanResultForProcessing(ScanResultType.APPLE_BACKGROUND, r))
                 .collect(Collectors.toList());
-        final List<ScanResult> scanResultsAppleForeground = scanResultsApple.stream()
+        final List<ScanResultForProcessing> scanResultsAppleForeground = scanResultsApple.stream()
                 .filter(r -> r.getScanRecord().getServiceUuids() != null && r.getScanRecord().getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == serviceId).count() > 0)
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
+                .map(r -> new ScanResultForProcessing(ScanResultType.APPLE_FOREGROUND, r))
                 .collect(Collectors.toList());
-        final List<ScanResult> scanResultsAndroid = devices.values().stream()
+        final List<ScanResultForProcessing> scanResultsAndroid = devices.values().stream()
                 .filter(r -> !scanResultsApple.contains(r) && r.getScanRecord() != null && r.getScanRecord().getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == serviceId).count() > 0)
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
+                .map(r -> new ScanResultForProcessing(ScanResultType.ANDROID, r))
                 .collect(Collectors.toList());
 
-        final List<ScanResult> prioritisedScanResults = new ArrayList<>(scanResults.size());
+        final List<ScanResultForProcessing> prioritisedScanResults = new ArrayList<>(scanResults.size());
         prioritisedScanResults.addAll(scanResultsAndroid);
         prioritisedScanResults.addAll(scanResultsAppleForeground);
         prioritisedScanResults.addAll(scanResultsAppleBackground);
 
-        for (final ScanResult scanResult : prioritisedScanResults) {
-            processScanResult(scanResult, serviceId, beaconCode, broadcaster, timeout);
+        for (final ScanResultForProcessing scanResultForProcessing : prioritisedScanResults) {
+            processScanResult(scanResultForProcessing, serviceId, beaconCode, broadcaster, timeout);
         }
         scanResults.clear();
     }
 
-    private final static void processScanResult(final ScanResult scanResult, final long serviceId, final long beaconCode, final Broadcaster<BeaconListener> broadcaster, final long timeout) {
-        Logger.debug(tag, "Processing scan result (scanResult={})", scanResult);
+    private final static void processScanResult(final ScanResultForProcessing scanResultForProcessing, final long serviceId, final long beaconCode, final Broadcaster<BeaconListener> broadcaster, final long timeout) {
+        Logger.debug(tag, "Processing scan result (type={},scanResult={})", scanResultForProcessing.scanResultType, scanResultForProcessing.scanResult);
 
-        final SparseArray<byte[]> manufacturerData = scanResult.getScanRecord().getManufacturerSpecificData();
-        for (int i = 0; i < manufacturerData.size(); i++) {
-            final int manufacturerId = manufacturerData.keyAt(i);
-            Logger.debug(tag, "Manufacturer data (id={},data={})", manufacturerId, Arrays.toString(manufacturerData.valueAt(i)));
-        }
-
+        final int rssi = scanResultForProcessing.scanResult.getRssi();
         final CompletableFuture<Long> future = new CompletableFuture<>();
         final AtomicBoolean gattOpen = new AtomicBoolean(true);
         final BluetoothGattCallback callback = new BluetoothGattCallback() {
@@ -176,6 +184,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                         gatt.close();
                         Logger.debug(tag, "GATT client closed");
                     }
+                    future.complete(transmitterBeaconCode);
                 }
             }
 
@@ -190,11 +199,11 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                             final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
                             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                             byteBuffer.putLong(0, beaconCode);
-                            byteBuffer.putInt(Long.BYTES, scanResult.getRssi());
+                            byteBuffer.putInt(Long.BYTES, rssi);
                             characteristic.setValue(byteBuffer.array());
-                            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+                            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
                             final boolean writeInitSuccess = gatt.writeCharacteristic(characteristic);
-                            Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, scanResult.getRssi(), writeInitSuccess);
+                            Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, rssi, writeInitSuccess);
                             // GATT close on write complete
                             return;
                         }
@@ -211,11 +220,11 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                 future.complete(transmitterBeaconCode);
             }
         };
-        final BluetoothGatt gatt = scanResult.getDevice().connectGatt(C19XApplication.getContext(), false, callback);
+        final BluetoothGatt gatt = scanResultForProcessing.scanResult.getDevice().connectGatt(C19XApplication.getContext(), false, callback);
         try {
             final Long transmitterBeaconCode = future.get(timeout, TimeUnit.MILLISECONDS);
             if (transmitterBeaconCode != null) {
-                broadcaster.broadcast(l -> l.detect(C19XApplication.getTimestamp().getTime(), transmitterBeaconCode, scanResult.getRssi()));
+                broadcaster.broadcast(l -> l.detect(C19XApplication.getTimestamp().getTime(), transmitterBeaconCode, rssi));
             }
         } catch (Throwable e) {
             Logger.debug(tag, "GATT client timeout");
