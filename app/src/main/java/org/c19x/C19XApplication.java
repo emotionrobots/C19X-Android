@@ -325,7 +325,7 @@ public class C19XApplication extends Application {
                         getBeaconTransmitter().setId(aliasIdentifier);
                     }
                 }
-            }, 0, 30 * 1000);
+            }, 0, 20 * 60 * 1000);
         }
         return beaconTransmitter;
     }

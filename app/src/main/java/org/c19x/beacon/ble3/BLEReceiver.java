@@ -28,9 +28,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -77,7 +77,10 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
         if (bluetoothLeScanner == null) {
             Logger.warn(tag, "Bluetooth LE scanner unsupported");
         }
-        this.flipFlopTimer = new FlipFlopTimer(8000, 4000, () -> startScan(), () -> stopScan());
+        this.flipFlopTimer = new FlipFlopTimer(
+                C19XApplication.getGlobalStatusLog().getBeaconReceiverOnDuration(),
+                C19XApplication.getGlobalStatusLog().getBeaconReceiverOffDuration(),
+                () -> startScan(), () -> stopScan());
     }
 
     private final static ScanCallback startScan(final BluetoothLeScanner bluetoothLeScanner, final Collection<ScanResult> scanResults, final AtomicBoolean started, final Broadcaster<BeaconListener> broadcaster) {
@@ -122,19 +125,8 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     }
 
     private final static void processScanResults(final ConcurrentLinkedQueue<ScanResult> scanResults, final long serviceId, final long beaconCode, final Broadcaster<BeaconListener> broadcaster, final long timeout) {
-        // Consolidate results by max RSSI for each device
-        final Map<BluetoothDevice, ScanResult> devices = new HashMap<>(scanResults.size());
-        scanResults.forEach(scanResult -> {
-            final BluetoothDevice device = scanResult.getDevice();
-            final int rssi = scanResult.getRssi();
-            final ScanResult scanResultMaxRssi = devices.get(device);
-            if (scanResultMaxRssi == null || scanResultMaxRssi.getRssi() < rssi) {
-                devices.put(device, scanResult);
-            }
-        });
-
-        // Sort consolidated results by service UUID (known first) then RSSI for connection
-        final List<ScanResult> scanResultsApple = devices.values().stream()
+        // Separate results and sort by RSSI
+        final List<ScanResult> scanResultsApple = scanResults.stream()
                 .filter(r -> r.getScanRecord() != null && r.getScanRecord().getManufacturerSpecificData(manufacturerIdForApple) != null)
                 .collect(Collectors.toList());
         final List<ScanResultForProcessing> scanResultsAppleBackground = scanResultsApple.stream()
@@ -143,24 +135,39 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                 .map(r -> new ScanResultForProcessing(ScanResultType.APPLE_BACKGROUND, r))
                 .collect(Collectors.toList());
         final List<ScanResultForProcessing> scanResultsAppleForeground = scanResultsApple.stream()
-                .filter(r -> r.getScanRecord().getServiceUuids() != null && r.getScanRecord().getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == serviceId).count() > 0)
+                .filter(r -> r.getScanRecord().getServiceUuids() != null &&
+                        r.getScanRecord().getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == serviceId).count() > 0)
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
                 .map(r -> new ScanResultForProcessing(ScanResultType.APPLE_FOREGROUND, r))
                 .collect(Collectors.toList());
-        final List<ScanResultForProcessing> scanResultsAndroid = devices.values().stream()
+        final List<ScanResultForProcessing> scanResultsAndroid = scanResults.stream()
                 .filter(r -> !scanResultsApple.contains(r) && r.getScanRecord() != null && r.getScanRecord().getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == serviceId).count() > 0)
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
                 .map(r -> new ScanResultForProcessing(ScanResultType.ANDROID, r))
                 .collect(Collectors.toList());
 
-        final List<ScanResultForProcessing> prioritisedScanResults = new ArrayList<>(scanResults.size());
-        prioritisedScanResults.addAll(scanResultsAndroid);
-        prioritisedScanResults.addAll(scanResultsAppleForeground);
-        prioritisedScanResults.addAll(scanResultsAppleBackground);
 
-        for (final ScanResultForProcessing scanResultForProcessing : prioritisedScanResults) {
-            processScanResult(scanResultForProcessing, serviceId, beaconCode, broadcaster, timeout);
+        final Set<BluetoothDevice> devices = new HashSet<>();
+        for (ScanResultForProcessing scanResultForProcessing : scanResultsAndroid) {
+            if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
+                processScanResult(scanResultForProcessing, serviceId, beaconCode, broadcaster, timeout);
+                devices.add(scanResultForProcessing.scanResult.getDevice());
+            }
         }
+        devices.clear();
+        for (ScanResultForProcessing scanResultForProcessing : scanResultsAppleForeground) {
+            if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
+                processScanResult(scanResultForProcessing, serviceId, beaconCode, broadcaster, timeout);
+                devices.add(scanResultForProcessing.scanResult.getDevice());
+            }
+        }
+        for (ScanResultForProcessing scanResultForProcessing : scanResultsAppleBackground) {
+            if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
+                processScanResult(scanResultForProcessing, serviceId, beaconCode, broadcaster, timeout);
+                devices.add(scanResultForProcessing.scanResult.getDevice());
+            }
+        }
+
         scanResults.clear();
     }
 
@@ -196,16 +203,23 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
                         if (characteristic.getUuid().getMostSignificantBits() == serviceId) {
                             transmitterBeaconCode = characteristic.getUuid().getLeastSignificantBits();
                             Logger.debug(tag, "GATT client discovered C19X service (device={},transmitterBeaconCode={})", gatt.getDevice(), transmitterBeaconCode);
-                            final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
-                            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-                            byteBuffer.putLong(0, beaconCode);
-                            byteBuffer.putInt(Long.BYTES, rssi);
-                            characteristic.setValue(byteBuffer.array());
-                            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-                            final boolean writeInitSuccess = gatt.writeCharacteristic(characteristic);
-                            Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, rssi, writeInitSuccess);
-                            // GATT close on write complete
-                            return;
+
+                            if (!C19XApplication.getBeaconTransmitter().isSupported()) {
+                                Logger.debug(tag, "GATT client not associated with transmitter, sending data instead");
+                                final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
+                                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                                byteBuffer.putLong(0, beaconCode);
+                                byteBuffer.putInt(Long.BYTES, rssi);
+                                characteristic.setValue(byteBuffer.array());
+                                characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+                                final boolean writeInitSuccess = gatt.writeCharacteristic(characteristic);
+                                Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, rssi, writeInitSuccess);
+                                // GATT close on write complete
+                                return;
+                            } else {
+                                gatt.disconnect();
+                                future.complete(transmitterBeaconCode);
+                            }
                         }
                     }
                 }
@@ -348,7 +362,7 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
     @Override
     public void setDutyCycle(int onDuration, int offDuration) {
         Logger.debug(tag, "Set receiver duty cycle (on={},off={})", onDuration, offDuration);
-//        flipFlopTimer.setOnDuration(onDuration);
-//        flipFlopTimer.setOffDuration(offDuration);
+        flipFlopTimer.setOnDuration(onDuration);
+        flipFlopTimer.setOffDuration(offDuration);
     }
 }
