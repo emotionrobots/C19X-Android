@@ -4,7 +4,7 @@
     <string name="app_notification">Scanning for other users in close proximity</string>
 
     <string name="trial_title">Pre-release software</string>
-    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-17) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
+    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-21) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
 
     <string name="file_preferences">preferences</string>
     <string name="file_registration">registration</string>

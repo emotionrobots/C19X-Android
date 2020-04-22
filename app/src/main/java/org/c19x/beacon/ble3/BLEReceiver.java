@@ -244,7 +244,10 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
             Logger.debug(tag, "GATT client timeout");
         }
         if (gattOpen.compareAndSet(true, false)) {
-            gatt.disconnect();
+            try {
+                gatt.disconnect();
+            } catch (Throwable e) {
+            }
             gatt.close();
             Logger.debug(tag, "GATT client closed");
         }

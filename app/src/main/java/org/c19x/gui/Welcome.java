@@ -47,11 +47,11 @@ public class Welcome extends Activity {
         ActivityUtil.setFullscreen(this);
         setContentView(R.layout.activity_welcome);
 
-//        ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
-//                () -> startApp(),
-//                () -> finish());
+        ActivityUtil.showDialog(this, R.string.trial_title, R.string.trial_description,
+                () -> startApp(),
+                () -> finish());
 
-        startApp();
+//        startApp();
     }
 
     private final void startApp() {
