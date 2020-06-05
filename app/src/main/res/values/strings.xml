@@ -4,7 +4,7 @@
     <string name="app_notification">Scanning for other users in close proximity</string>
 
     <string name="trial_title">Pre-release software</string>
-    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-21) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
+    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-23) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
 
     <string name="file_preferences">preferences</string>
     <string name="file_registration">registration</string>
@@ -50,6 +50,7 @@
     <string name="status_beacon_on">Beacon ON</string>
     <string name="status_beacon_rx">Receive only</string>
     <string name="status_beacon_tx">Transmit only</string>
+    <string name="status_beacon_off_notification">Scanning stopped, switch on Bluetooth to resume</string>
     <string name="status_contact_none">No contact</string>
     <string name="status_data_update_latest">Latest data</string>
     <string name="status_data_update_download">Pending update</string>
@@ -73,4 +74,12 @@
 
     <string name="notification_channel_name">COVID-19 Tracer</string>
     <string name="notification_channel_description">COVID-19 Tracer notifications</string>
+    <string name="title_activity_test">TestActivity</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
 </resources>

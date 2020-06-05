@@ -22,23 +22,27 @@ public class BluetoothStateMonitor extends DefaultBroadcaster<BluetoothStateMoni
             if (intent.getAction() == BluetoothAdapter.ACTION_STATE_CHANGED) {
                 final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
                 Logger.debug(tag, "Bluetooth state changed (state={})", state);
-                switch (state) {
-                    case BluetoothAdapter.STATE_TURNING_ON:
-                        Logger.debug(tag, "Bluetooth enabling");
-                        broadcast(l -> l.enabling());
-                        break;
-                    case BluetoothAdapter.STATE_ON:
-                        Logger.debug(tag, "Bluetooth enabled");
-                        broadcast(l -> l.enabled());
-                        break;
-                    case BluetoothAdapter.STATE_TURNING_OFF:
-                        Logger.debug(tag, "Bluetooth disabling");
-                        broadcast(l -> l.disabling());
-                        break;
-                    case BluetoothAdapter.STATE_OFF:
-                        Logger.debug(tag, "Bluetooth disabled");
-                        broadcast(l -> l.disabled());
-                        break;
+                try {
+                    switch (state) {
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            Logger.debug(tag, "Bluetooth enabling");
+                            broadcast(l -> l.enabling());
+                            break;
+                        case BluetoothAdapter.STATE_ON:
+                            Logger.debug(tag, "Bluetooth enabled");
+                            broadcast(l -> l.enabled());
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            Logger.debug(tag, "Bluetooth disabling");
+                            broadcast(l -> l.disabling());
+                            break;
+                        case BluetoothAdapter.STATE_OFF:
+                            Logger.debug(tag, "Bluetooth disabled");
+                            broadcast(l -> l.disabled());
+                            break;
+                    }
+                } catch (Throwable e) {
+                    Logger.warn(tag, "Bluetooth state change listener exception", e);
                 }
             }
         }

@@ -19,6 +19,7 @@ import org.c19x.data.PersonalMessage;
 import org.c19x.logic.RiskAnalysisListener;
 import org.c19x.logic.RiskFactors;
 import org.c19x.util.Logger;
+import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
 
 /**
  * Minimalist app user interface for simplicity and usability
@@ -28,6 +29,7 @@ public class MainActivity extends Activity {
     private PowerManager.WakeLock wakeLock;
 
     // Beacon listener used by startBeacon and stopBeacon to update UI on state change.
+    private BluetoothStateMonitorListener bluetoothStateMonitorListener;
     private BeaconListener beaconListener;
 
     /**
@@ -86,6 +88,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         // Start monitoring bluetooth state
+        registerBluetoothStateMonitorListener();
         registerBluetoothBeaconListeners();
 
         // Start monitoring risk analysis results
@@ -108,6 +111,7 @@ public class MainActivity extends Activity {
 
         // Stop monitoring bluetooth state
         unregisterBluetoothBeaconListeners();
+        unregisterBluetoothStateMonitorListener();
 
         ActivityUtil.setNotification(this, null);
 
@@ -128,6 +132,26 @@ public class MainActivity extends Activity {
     }
 
     // BEACON ======================================================================================
+
+    private final void registerBluetoothStateMonitorListener() {
+        final Activity self = this;
+        this.bluetoothStateMonitorListener = new BluetoothStateMonitorListener() {
+            @Override
+            public void enabled() {
+                ActivityUtil.setNotification(self, getString(R.string.app_notification));
+            }
+
+            @Override
+            public void disabling() {
+                ActivityUtil.setNotification(self, getString(R.string.status_beacon_off_notification));
+            }
+        };
+        C19XApplication.getBluetoothStateMonitor().addListener(bluetoothStateMonitorListener);
+    }
+
+    private final void unregisterBluetoothStateMonitorListener() {
+        C19XApplication.getBluetoothStateMonitor().removeListener(bluetoothStateMonitorListener);
+    }
 
     /**
      * Start beacon transmitter and receiver, and register this activity as listener
@@ -428,7 +452,7 @@ public class MainActivity extends Activity {
         final long exposureDurationThreshold = C19XApplication.getGlobalStatusLog().getExposureDurationThreshold();
         final long minutes = (riskFactors.closeContactDuration / riskFactors.detectionDays) / 60000;
 
-        if (minutes < 2) {
+        if (minutes == 0) {
             textView.setText(R.string.status_contact_none);
         } else if (minutes < 120) {
             textView.setText(minutes + " minutes");
@@ -437,7 +461,7 @@ public class MainActivity extends Activity {
             textView.setText(hours + " hours");
         }
 
-        textView.setText(((riskFactors.closeContactDuration / riskFactors.detectionDays) / 1000) + " seconds");
+        // textView.setText(((riskFactors.closeContactDuration / riskFactors.detectionDays) / 1000) + " seconds");
 
         if (riskFactors.closeContactDuration >= exposureDurationThreshold) {
             textView.setBackgroundResource(R.color.colorAmber);

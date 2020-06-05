@@ -9,4 +9,5 @@
     <dimen name="marginMedium">10dp</dimen>
     <dimen name="marginSmall">5dp</dimen>
     <dimen name="marginTiny">2dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
 </resources>

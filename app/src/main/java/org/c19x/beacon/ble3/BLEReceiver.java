@@ -316,9 +316,21 @@ public class BLEReceiver extends DefaultBroadcaster<BeaconListener> implements B
 
     private final void stopScan() {
         if (scanCallback.get() != null) {
-            stopScan(bluetoothLeScanner, scanCallback.get());
-            bluetoothAdapter.cancelDiscovery();
-            processScanResults(scanResults, BLETransmitter.bleServiceId, C19XApplication.getBeaconTransmitter().getId(), this, gattConnectionTimeout);
+            try {
+                stopScan(bluetoothLeScanner, scanCallback.get());
+            } catch (Throwable e) {
+                if (bluetoothAdapter.isEnabled()) {
+                    Logger.warn(tag, "Failed to stop BLE scanner even though bluetooth adapter is ON", e);
+                } else {
+                    Logger.info(tag, "Failed to stop BLE scanner because bluetooth adapter is already OFF", e);
+                }
+            }
+            try {
+                bluetoothAdapter.cancelDiscovery();
+                processScanResults(scanResults, BLETransmitter.bleServiceId, C19XApplication.getBeaconTransmitter().getId(), this, gattConnectionTimeout);
+            } catch (Throwable e) {
+                Logger.warn(tag, "Failed to process scan results", e);
+            }
         }
     }
 
