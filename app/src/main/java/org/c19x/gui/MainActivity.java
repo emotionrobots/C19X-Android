@@ -11,13 +11,13 @@ import android.widget.TextView;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
-import org.c19x.beacon.BeaconListener;
-import org.c19x.data.GlobalStatusLogListener;
-import org.c19x.data.GlobalStatusLogReceiver;
-import org.c19x.data.HealthStatus;
-import org.c19x.data.PersonalMessage;
-import org.c19x.logic.RiskAnalysisListener;
-import org.c19x.logic.RiskFactors;
+import org.c19x.old.beacon.BeaconListener;
+import org.c19x.old.data.GlobalStatusLogListener;
+import org.c19x.old.data.GlobalStatusLogReceiver;
+import org.c19x.old.data.HealthStatus;
+import org.c19x.old.data.PersonalMessage;
+import org.c19x.old.logic.RiskAnalysisListener;
+import org.c19x.old.logic.RiskFactors;
 import org.c19x.util.Logger;
 import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
 

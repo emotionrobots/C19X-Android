@@ -11,8 +11,8 @@ import androidx.annotation.Nullable;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
-import org.c19x.beacon.BeaconListener;
 import org.c19x.gui.ActivityUtil;
+import org.c19x.old.beacon.BeaconListener;
 import org.c19x.util.Logger;
 import org.c19x.util.bluetooth.BluetoothStateMonitorListener;
 

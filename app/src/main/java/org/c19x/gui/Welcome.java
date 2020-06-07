@@ -16,12 +16,12 @@ import androidx.core.app.ActivityCompat;
 
 import org.c19x.C19XApplication;
 import org.c19x.R;
-import org.c19x.beacon.BeaconListener;
-import org.c19x.data.DeviceRegistration;
-import org.c19x.data.DeviceRegistrationListener;
-import org.c19x.data.GlobalStatusLogListener;
-import org.c19x.data.GlobalStatusLogReceiver;
 import org.c19x.network.response.NetworkResponse;
+import org.c19x.old.beacon.BeaconListener;
+import org.c19x.old.data.DeviceRegistration;
+import org.c19x.old.data.DeviceRegistrationListener;
+import org.c19x.old.data.GlobalStatusLogListener;
+import org.c19x.old.data.GlobalStatusLogReceiver;
 import org.c19x.service.BeaconService;
 import org.c19x.util.Logger;
 
