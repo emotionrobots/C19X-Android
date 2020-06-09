@@ -2,12 +2,13 @@ package org.c19x.logic;
 
 import android.util.Base64;
 
+import org.c19x.data.type.SharedSecret;
 import org.c19x.util.Logger;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -40,25 +41,19 @@ public class AES {
         }
     }
 
-    public final static String encrypt(final SecretKey key, final String value) {
-        return encrypt(key.getEncoded(), value);
-    }
-
-    public final static String encrypt(final byte[] key, final String value) {
-        assert (key.length == 256);
+    public final static String encrypt(final SharedSecret sharedSecret, final String value) {
         try {
             final byte[] iv = new byte[16];
             getSecureRandom().nextBytes(iv);
 
             final IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-            final SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            final SecretKeySpec secretKeySpec = new SecretKeySpec(sharedSecret.value, "AES");
 
             final Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
 
-            final byte[] encrypted = cipher.doFinal(value.getBytes());
-            final String bundle = Base64.encodeToString(iv, Base64.DEFAULT)
-                    + "," + Base64.encodeToString(encrypted, Base64.DEFAULT);
+            final byte[] encrypted = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+            final String bundle = base64Encode(iv) + "," + base64Encode(encrypted);
             return bundle;
         } catch (Throwable e) {
             Logger.error(tag, "Failed to encrypt", e);
@@ -66,22 +61,18 @@ public class AES {
         }
     }
 
-    public final static String decrypt(final SecretKey secretKey, final String bundle) {
-        return decrypt(secretKey.getEncoded(), bundle);
-    }
-
-    public final static String decrypt(final byte[] key, final String bundle) {
+    public final static String decrypt(final SharedSecret sharedSecret, final String bundle) {
         try {
             final String ivString = bundle.substring(0, bundle.indexOf(','));
             final String cryptString = bundle.substring(ivString.length() + 1);
 
-            final IvParameterSpec ivParameterSpec = new IvParameterSpec(Base64.decode(ivString, Base64.DEFAULT));
-            final SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            final IvParameterSpec ivParameterSpec = new IvParameterSpec(base64Decode(ivString));
+            final SecretKeySpec secretKeySpec = new SecretKeySpec(sharedSecret.value, "AES");
 
             final Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
 
-            final String clearText = new String(cipher.doFinal(Base64.decode(cryptString, Base64.DEFAULT)));
+            final String clearText = new String(cipher.doFinal(base64Decode(cryptString)), StandardCharsets.UTF_8);
             return clearText;
         } catch (Throwable e) {
             Logger.error(tag, "Failed to decrypt", e);
@@ -89,4 +80,11 @@ public class AES {
         }
     }
 
+    private final static String base64Encode(final byte[] data) {
+        return Base64.encodeToString(data, Base64.DEFAULT + Base64.NO_WRAP + Base64.URL_SAFE);
+    }
+
+    private final static byte[] base64Decode(final String value) {
+        return Base64.decode(value, Base64.DEFAULT + Base64.NO_WRAP + Base64.URL_SAFE);
+    }
 }

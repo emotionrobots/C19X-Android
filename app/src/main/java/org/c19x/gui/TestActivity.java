@@ -17,6 +17,7 @@ import org.c19x.beacon.ConcreteTransmitter;
 import org.c19x.beacon.DayCodes;
 import org.c19x.beacon.Receiver;
 import org.c19x.beacon.Transmitter;
+import org.c19x.data.type.SharedSecret;
 import org.c19x.data.type.TimeInterval;
 import org.c19x.util.Logger;
 
@@ -41,7 +42,7 @@ public class TestActivity extends AppCompatActivity {
             }
         }
 
-        final DayCodes dayCodes = new ConcreteDayCodes(new byte[]{0});
+        final DayCodes dayCodes = new ConcreteDayCodes(new SharedSecret(new byte[]{0}));
         final BeaconCodes beaconCodes = new ConcreteBeaconCodes(dayCodes);
         final Transmitter transmitter = new ConcreteTransmitter(C19XApplication.getContext(), beaconCodes, new TimeInterval(120));
         final Receiver receiver = new ConcreteReceiver(C19XApplication.getContext(), transmitter);

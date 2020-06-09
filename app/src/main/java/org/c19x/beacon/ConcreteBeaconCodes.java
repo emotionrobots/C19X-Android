@@ -1,7 +1,9 @@
 package org.c19x.beacon;
 
+import org.c19x.data.primitive.Tuple;
 import org.c19x.data.type.BeaconCode;
 import org.c19x.data.type.BeaconCodeSeed;
+import org.c19x.data.type.Day;
 import org.c19x.util.Logger;
 import org.c19x.util.security.PRNG;
 
@@ -24,21 +26,24 @@ public class ConcreteBeaconCodes implements BeaconCodes {
     @Override
     public BeaconCode get() {
         if (seed == null) {
-            seed = dayCodes.seed();
+            final Tuple<BeaconCodeSeed, Day> seedToday = dayCodes.seed();
+            if (seedToday != null) {
+                seed = seedToday.a;
+            }
         }
         if (seed == null) {
             Logger.warn(tag, "No seed code available");
             return null;
         }
-        final BeaconCodeSeed seedToday = dayCodes.seed();
+        final Tuple<BeaconCodeSeed, Day> seedToday = dayCodes.seed();
         if (seedToday == null) {
             Logger.warn(tag, "No seed code available");
             return null;
         }
-        if (values == null || seed.value != seedToday.value) {
+        if (values == null || seed.value != seedToday.a.value) {
             Logger.debug(tag, "Generating beacon codes for new day (day={})", dayCodes.day().value);
-            seed = seedToday;
-            values = beaconCodes(seedToday, codesPerDay);
+            seed = seedToday.a;
+            values = beaconCodes(seed, codesPerDay);
         }
         if (values == null) {
             Logger.warn(tag, "No beacon code available");

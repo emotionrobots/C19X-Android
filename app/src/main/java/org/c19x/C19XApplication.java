@@ -12,6 +12,8 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.util.Base64;
 
+import org.c19x.logic.ConcreteController;
+import org.c19x.logic.Controller;
 import org.c19x.network.NetworkClient;
 import org.c19x.network.response.NetworkResponse;
 import org.c19x.old.beacon.BeaconReceiver;
@@ -44,6 +46,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class C19XApplication extends Application {
     private final static String tag = C19XApplication.class.getName();
+    private Controller controller;
 
     /**
      * Bluetooth beacon service Id
@@ -60,7 +63,6 @@ public class C19XApplication extends Application {
      * Default application server on first use, this will be changed by downloaded updates.
      */
     public final static String defaultServer = "http://c19x.servehttp.com:8080";
-
 
     private static Application application;
     private static Context context;
@@ -87,6 +89,8 @@ public class C19XApplication extends Application {
         application = this;
         context = getApplicationContext();
         createNotificationChannel();
+        controller = new ConcreteController(context);
+        controller.foreground();
 
 
         storage = getStorage();

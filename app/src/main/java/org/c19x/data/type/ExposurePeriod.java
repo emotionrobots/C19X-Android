@@ -1,11 +1,9 @@
 package org.c19x.data.type;
 
-import java.util.Objects;
+public class ExposurePeriod {
+    public int value;
 
-public class BeaconCodeSeed {
-    public long value = 0;
-
-    public BeaconCodeSeed(long value) {
+    public ExposurePeriod(int value) {
         this.value = value;
     }
 
@@ -13,18 +11,18 @@ public class BeaconCodeSeed {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        BeaconCodeSeed that = (BeaconCodeSeed) o;
+        ExposurePeriod that = (ExposurePeriod) o;
         return value == that.value;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        return value;
     }
 
     @Override
     public String toString() {
-        return "BeaconCodeSeed{" +
+        return "ExposurePeriod{" +
                 "value=" + value +
                 '}';
     }

@@ -1,5 +1,6 @@
 package org.c19x.beacon;
 
+import org.c19x.data.primitive.Tuple;
 import org.c19x.data.type.BeaconCodeSeed;
 import org.c19x.data.type.Day;
 import org.c19x.data.type.DayCode;
@@ -60,11 +61,11 @@ public class ConcreteDayCodes implements DayCodes {
 		final byte[] reversed = new byte[]{data[7], data[6], data[5], data[4], data[3], data[2], data[1], data[0]};
 		// Hash of reversed
 		try {
-			final MessageDigest sha = MessageDigest.getInstance("SHA-256");
-			final byte[] hash = sha.digest(reversed);
-			final long seed = longValue(hash);
-			return new BeaconCodeSeed(seed, day);
-		} catch (Throwable e) {
+            final MessageDigest sha = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = sha.digest(reversed);
+            final long seed = longValue(hash);
+            return new BeaconCodeSeed(seed);
+        } catch (Throwable e) {
 			Logger.warn(tag, "Failed to transform day code to beacon code seed", e);
 			return null;
 		}
@@ -85,16 +86,16 @@ public class ConcreteDayCodes implements DayCodes {
 		}
 	}
 
-	@Override
-	public BeaconCodeSeed seed() {
-		final Day day = day();
-		try {
-			final DayCode dayCode = values[day.value];
-			final BeaconCodeSeed beaconCodeSeed = beaconCodeSeed(dayCode, day);
-			return beaconCodeSeed;
-		} catch (Throwable e) {
-			Logger.warn(tag, "Day out of range");
-			return null;
-		}
-	}
+    @Override
+    public Tuple<BeaconCodeSeed, Day> seed() {
+        final Day day = day();
+        try {
+            final DayCode dayCode = values[day.value];
+            final BeaconCodeSeed beaconCodeSeed = beaconCodeSeed(dayCode, day);
+            return new Tuple<>(beaconCodeSeed, day);
+        } catch (Throwable e) {
+            Logger.warn(tag, "Day out of range");
+            return null;
+        }
+    }
 }

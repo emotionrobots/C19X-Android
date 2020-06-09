@@ -10,7 +10,7 @@ import org.c19x.data.type.SerialNumber;
 import org.c19x.data.type.Status;
 import org.c19x.data.type.Time;
 
-import java.util.List;
+import java.util.Deque;
 
 public interface ControllerDelegate {
     void controller(ControllerState didUpdateState);
@@ -25,7 +25,7 @@ public interface ControllerDelegate {
 
     void message(Message didUpdateTo);
 
-    void database(List<Contact> didUpdateContacts);
+    void database(Deque<Contact> didUpdateContacts);
 
     void advice(Advice didUpdateTo, Status contactStatus);
 
