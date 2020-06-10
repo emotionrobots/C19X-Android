@@ -1,6 +1,4 @@
-package org.c19x.util.security;
-
-import org.c19x.util.Logger;
+package org.c19x.data;
 
 import java.security.SecureRandom;
 

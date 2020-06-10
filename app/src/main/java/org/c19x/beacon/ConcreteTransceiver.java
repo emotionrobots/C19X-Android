@@ -8,14 +8,16 @@ import org.c19x.data.type.TimeInterval;
 public class ConcreteTransceiver implements Transceiver {
     private final DayCodes dayCodes;
     private final BeaconCodes beaconCodes;
+    private final BluetoothStateManager bluetoothStateManager;
     private final Transmitter transmitter;
     private final Receiver receiver;
 
     public ConcreteTransceiver(Context context, SharedSecret sharedSecret, TimeInterval codeUpdateAfter) {
         dayCodes = new ConcreteDayCodes(sharedSecret);
         beaconCodes = new ConcreteBeaconCodes(dayCodes);
-        transmitter = new ConcreteTransmitter(context, beaconCodes, codeUpdateAfter);
-        receiver = new ConcreteReceiver(context, transmitter);
+        bluetoothStateManager = new ConcreteBluetoothStateManager(context);
+        transmitter = new ConcreteTransmitter(context, bluetoothStateManager, beaconCodes, codeUpdateAfter);
+        receiver = new ConcreteReceiver(context, bluetoothStateManager, transmitter);
     }
 
     @Override

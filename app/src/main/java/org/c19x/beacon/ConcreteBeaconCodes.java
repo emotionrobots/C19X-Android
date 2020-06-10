@@ -1,18 +1,18 @@
 package org.c19x.beacon;
 
+import org.c19x.data.Logger;
+import org.c19x.data.PRNG;
 import org.c19x.data.primitive.Tuple;
 import org.c19x.data.type.BeaconCode;
 import org.c19x.data.type.BeaconCodeSeed;
 import org.c19x.data.type.Day;
-import org.c19x.util.Logger;
-import org.c19x.util.security.PRNG;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 
 public class ConcreteBeaconCodes implements BeaconCodes {
     private final static String tag = ConcreteBeaconCodes.class.getName();
-    private final static int codesPerDay = 240;
+    public final static int codesPerDay = 240;
     private final PRNG prng = new PRNG();
     private final DayCodes dayCodes;
     private BeaconCodeSeed seed = null;
@@ -58,7 +58,7 @@ public class ConcreteBeaconCodes implements BeaconCodes {
         return byteBuffer.getLong(0);
     }
 
-    private final static BeaconCode[] beaconCodes(final BeaconCodeSeed beaconCodeSeed, final int count) {
+    public final static BeaconCode[] beaconCodes(final BeaconCodeSeed beaconCodeSeed, final int count) {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES);
         byteBuffer.putLong(0, beaconCodeSeed.value);
         final byte[] data = byteBuffer.array();

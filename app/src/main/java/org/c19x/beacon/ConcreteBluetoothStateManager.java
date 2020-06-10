@@ -6,18 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 
-import org.c19x.C19XApplication;
+import org.c19x.data.Logger;
 import org.c19x.data.type.BluetoothState;
-import org.c19x.util.Logger;
 
 /**
  * Monitors bluetooth state changes.
  */
 public class ConcreteBluetoothStateManager implements BluetoothStateManager {
     private final static String tag = ConcreteBluetoothStateManager.class.getName();
-    public final static BluetoothStateManager shared = new ConcreteBluetoothStateManager(C19XApplication.getContext());
     private BluetoothState state;
-    private final IntentFilter intentFilter = new IntentFilter();
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -47,8 +44,10 @@ public class ConcreteBluetoothStateManager implements BluetoothStateManager {
     /**
      * Monitors bluetooth state changes.
      */
-    private ConcreteBluetoothStateManager(Context context) {
+    public ConcreteBluetoothStateManager(Context context) {
         state = state();
+
+        final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         context.registerReceiver(broadcastReceiver, intentFilter);
     }

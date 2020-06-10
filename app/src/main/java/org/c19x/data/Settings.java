@@ -25,7 +25,6 @@ import org.c19x.data.type.Status;
 import org.c19x.data.type.Time;
 import org.c19x.data.type.TimeInterval;
 import org.c19x.data.type.TimeMillis;
-import org.c19x.util.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,9 +41,6 @@ import javax.crypto.spec.GCMParameterSpec;
 
 public class Settings {
     private final static String tag = Settings.class.getName();
-    private final Context context;
-    private final SecretKey secretKey;
-    private SharedPreferences sharedPreferences;
     private final static String keyStatusValue = "Status.Value";
     private final static String keyContactsCount = "Contacts.Count";
     private final static String keyContactsStatus = "Contacts.Status";
@@ -71,10 +67,12 @@ public class Settings {
     private final static String keyTimestampSettings = "Timestamp.Settings";
     private final static String keyTimestampInfectionData = "Timestamp.InfectionData";
 
+    private final Context context;
+    private final SharedPreferences sharedPreferences;
+
 
     public Settings(Context context) {
         this.context = context;
-        secretKey = getMasterKey();
         sharedPreferences = context.getSharedPreferences("C19X", Context.MODE_PRIVATE);
     }
 
@@ -466,11 +464,11 @@ public class Settings {
         if (encrypted == null) {
             return null;
         }
-        return decrypt(secretKey, encrypted);
+        return decrypt(getMasterKey(), encrypted);
     }
 
     private void setEncrypted(final String value, final String forKey) {
-        final String encrypted = encrypt(secretKey, value);
+        final String encrypted = encrypt(getMasterKey(), value);
         if (encrypted == null) {
             return;
         }
@@ -528,7 +526,7 @@ public class Settings {
      *
      * @return
      */
-    private final static SecretKey getMasterKey() {
+    private final static synchronized SecretKey getMasterKey() {
         try {
             final String alias = "c19xMasterKey";
             final KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
@@ -555,7 +553,7 @@ public class Settings {
         }
     }
 
-    private final static void removeMasterKey() {
+    private final static synchronized void removeMasterKey() {
         try {
             final String alias = "c19xMasterKey";
             final KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");

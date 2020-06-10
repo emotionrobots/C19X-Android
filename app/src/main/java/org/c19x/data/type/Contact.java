@@ -1,5 +1,7 @@
 package org.c19x.data.type;
 
+import org.c19x.data.database.ContactEntity;
+
 public class Contact {
     public Time time;
     public RSSI rssi;
@@ -9,6 +11,12 @@ public class Contact {
         this.time = time;
         this.rssi = rssi;
         this.code = code;
+    }
+
+    public Contact(ContactEntity entity) {
+        time = new Time(entity.time);
+        rssi = new RSSI(entity.rssi);
+        code = new BeaconCode(entity.code);
     }
 
     @Override

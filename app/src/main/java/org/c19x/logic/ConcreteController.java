@@ -7,6 +7,7 @@ import org.c19x.beacon.ReceiverDelegate;
 import org.c19x.beacon.Transceiver;
 import org.c19x.data.ConcreteDatabase;
 import org.c19x.data.Database;
+import org.c19x.data.Logger;
 import org.c19x.data.Settings;
 import org.c19x.data.primitive.Triple;
 import org.c19x.data.primitive.Tuple;
@@ -24,7 +25,6 @@ import org.c19x.data.type.Status;
 import org.c19x.data.type.Time;
 import org.c19x.data.type.TimeInterval;
 import org.c19x.data.type.TimeMillis;
-import org.c19x.util.Logger;
 
 import java.text.SimpleDateFormat;
 import java.util.stream.Collectors;
@@ -45,7 +45,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
             settings.registrationState(RegistrationState.unregistered);
         }
         network = new ConcreteNetwork(context, settings);
-        database = new ConcreteDatabase();
+        database = new ConcreteDatabase(context);
         riskAnalysis = new ConcreteRiskAnalysis();
 
         reset();

@@ -1,6 +1,6 @@
 package org.c19x.data.type;
 
-import org.c19x.util.Logger;
+import org.c19x.data.Logger;
 import org.json.JSONObject;
 
 import java.util.Map;
@@ -26,5 +26,12 @@ public class ServerSettings {
         } catch (Throwable e) {
             Logger.warn(tag, "Failed to parse json (json={})", json, e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "ServerSettings{" +
+                "value=" + value +
+                '}';
     }
 }

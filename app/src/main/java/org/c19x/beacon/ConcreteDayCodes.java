@@ -1,11 +1,11 @@
 package org.c19x.beacon;
 
+import org.c19x.data.Logger;
 import org.c19x.data.primitive.Tuple;
 import org.c19x.data.type.BeaconCodeSeed;
 import org.c19x.data.type.Day;
 import org.c19x.data.type.DayCode;
 import org.c19x.data.type.SharedSecret;
-import org.c19x.util.Logger;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;

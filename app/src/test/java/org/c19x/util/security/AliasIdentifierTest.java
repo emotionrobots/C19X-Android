@@ -1,10 +1,9 @@
 package org.c19x.util.security;
 
+import org.c19x.data.PRNG;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class AliasIdentifierTest {

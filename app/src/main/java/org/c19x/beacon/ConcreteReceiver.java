@@ -17,11 +17,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
 
-import org.c19x.C19XApplication;
+import org.c19x.data.Logger;
 import org.c19x.data.type.BeaconCode;
 import org.c19x.data.type.BluetoothState;
 import org.c19x.data.type.RSSI;
-import org.c19x.util.Logger;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -46,7 +45,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
     private final Transmitter transmitter;
     private final Handler handler;
     private final Queue<ScanResult> scanResults = new ConcurrentLinkedQueue<>();
-    private BluetoothStateManager bluetoothStateManager = ConcreteBluetoothStateManager.shared;
+    private final BluetoothStateManager bluetoothStateManager;
     private BluetoothLeScanner bluetoothLeScanner;
     private ScanCallback scanCallback;
     private boolean enabled = false;
@@ -64,8 +63,9 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         }
     }
 
-    public ConcreteReceiver(final Context context, final Transmitter transmitter) {
+    public ConcreteReceiver(final Context context, final BluetoothStateManager bluetoothStateManager, final Transmitter transmitter) {
         this.context = context;
+        this.bluetoothStateManager = bluetoothStateManager;
         this.transmitter = transmitter;
         this.handler = new Handler(Looper.getMainLooper());
         final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -113,7 +113,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             scanCallback = null;
             final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             bluetoothAdapter.cancelDiscovery();
-            processScanResults(scanResults, transmitter.beaconCode());
+            processScanResults(context, scanResults, transmitter);
         } catch (Throwable e) {
             Logger.warn(tag, "Stop scan failed", e);
         }
@@ -202,14 +202,8 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         return callback;
     }
 
-    private final static void stopScan(final BluetoothLeScanner bluetoothLeScanner, final ScanCallback scanCallback) {
-
-        Logger.debug(tag, "Scan stopped");
-    }
-
-    private final static void processScanResults(final Queue<ScanResult> scanResults, final BeaconCode beaconCode) {
+    private final static void processScanResults(final Context context, final Queue<ScanResult> scanResults, final Transmitter transmitter) {
         final long beaconServiceUUIDPrefix = Transmitter.beaconServiceUUID.getMostSignificantBits();
-
 
         // Separate results and sort by RSSI
         final List<ScanResult> scanResultsApple = scanResults.stream()
@@ -236,20 +230,20 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         final Set<BluetoothDevice> devices = new HashSet<>();
         for (ScanResultForProcessing scanResultForProcessing : scanResultsAndroid) {
             if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
-                processScanResult(scanResultForProcessing, beaconServiceUUIDPrefix, beaconCode);
+                processScanResult(context, scanResultForProcessing, beaconServiceUUIDPrefix, transmitter);
                 devices.add(scanResultForProcessing.scanResult.getDevice());
             }
         }
         devices.clear();
         for (ScanResultForProcessing scanResultForProcessing : scanResultsAppleForeground) {
             if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
-                processScanResult(scanResultForProcessing, beaconServiceUUIDPrefix, beaconCode);
+                processScanResult(context, scanResultForProcessing, beaconServiceUUIDPrefix, transmitter);
                 devices.add(scanResultForProcessing.scanResult.getDevice());
             }
         }
         for (ScanResultForProcessing scanResultForProcessing : scanResultsAppleBackground) {
             if (!devices.contains(scanResultForProcessing.scanResult.getDevice())) {
-                processScanResult(scanResultForProcessing, beaconServiceUUIDPrefix, beaconCode);
+                processScanResult(context, scanResultForProcessing, beaconServiceUUIDPrefix, transmitter);
                 devices.add(scanResultForProcessing.scanResult.getDevice());
             }
         }
@@ -257,7 +251,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         scanResults.clear();
     }
 
-    private final static void processScanResult(final ScanResultForProcessing scanResultForProcessing, final long serviceId, final BeaconCode beaconCode) {
+    private final static void processScanResult(final Context context, final ScanResultForProcessing scanResultForProcessing, final long serviceId, final Transmitter transmitter) {
         Logger.debug(tag, "Processing scan result (type={},scanResult={})", scanResultForProcessing.scanResultType, scanResultForProcessing.scanResult);
 
         final int rssi = scanResultForProcessing.scanResult.getRssi();
@@ -290,8 +284,9 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                             transmitterBeaconCode = characteristic.getUuid().getLeastSignificantBits();
                             Logger.debug(tag, "GATT client discovered C19X service (device={},transmitterBeaconCode={})", gatt.getDevice(), transmitterBeaconCode);
 
-                            if (!C19XApplication.getBeaconTransmitter().isSupported()) {
+                            if (!transmitter.isSupported()) {
                                 Logger.debug(tag, "GATT client not associated with transmitter, sending data instead");
+                                final BeaconCode beaconCode = transmitter.beaconCode();
                                 final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
                                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                                 byteBuffer.putLong(0, beaconCode.value);
@@ -320,7 +315,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                 future.complete(transmitterBeaconCode);
             }
         };
-        final BluetoothGatt gatt = scanResultForProcessing.scanResult.getDevice().connectGatt(C19XApplication.getContext(), false, callback);
+        final BluetoothGatt gatt = scanResultForProcessing.scanResult.getDevice().connectGatt(context, false, callback);
         try {
             final Long transmitterBeaconCode = future.get(8, TimeUnit.SECONDS);
             if (transmitterBeaconCode != null) {

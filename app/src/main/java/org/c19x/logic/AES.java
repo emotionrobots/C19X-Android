@@ -2,8 +2,8 @@ package org.c19x.logic;
 
 import android.util.Base64;
 
+import org.c19x.data.Logger;
 import org.c19x.data.type.SharedSecret;
-import org.c19x.util.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;

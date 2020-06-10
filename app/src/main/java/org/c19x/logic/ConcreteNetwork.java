@@ -7,6 +7,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.c19x.data.Logger;
 import org.c19x.data.Settings;
 import org.c19x.data.primitive.TriConsumer;
 import org.c19x.data.primitive.Tuple;
@@ -19,7 +20,6 @@ import org.c19x.data.type.SharedSecret;
 import org.c19x.data.type.Status;
 import org.c19x.data.type.Time;
 import org.c19x.data.type.TimeMillis;
-import org.c19x.util.Logger;
 
 import java.net.URLEncoder;
 import java.util.function.BiConsumer;
@@ -164,7 +164,7 @@ public class ConcreteNetwork implements Network {
     @Override
     public void getInfectionData(BiConsumer<InfectionData, Error> callback) {
         Logger.debug(tag, "Get infection data request");
-        final String url = settings.server().value + "parameters";
+        final String url = settings.server().value + "infectionData";
         final StringRequest request = new StringRequest(url, response -> {
             try {
                 final InfectionData infectionData = new InfectionData(response);

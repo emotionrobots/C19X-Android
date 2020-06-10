@@ -18,11 +18,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
 
+import org.c19x.data.Logger;
 import org.c19x.data.type.BeaconCode;
 import org.c19x.data.type.BluetoothState;
 import org.c19x.data.type.RSSI;
 import org.c19x.data.type.TimeInterval;
-import org.c19x.util.Logger;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -45,7 +45,7 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
 
     private final Context context;
     private final Handler handler;
-    private BluetoothStateManager bluetoothStateManager = ConcreteBluetoothStateManager.shared;
+    private BluetoothStateManager bluetoothStateManager;
     private BluetoothLeAdvertiser bluetoothLeAdvertiser;
     private BluetoothGattServer bluetoothGattServer;
     private AdvertiseCallback advertiseCallback;
@@ -57,8 +57,9 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
      * to manually change the beacon code being broadcasted by the transmitter. The code is also
      * automatically updated after the given time interval.
      */
-    public ConcreteTransmitter(Context context, BeaconCodes beaconCodes, TimeInterval updateCodeAfter) {
+    public ConcreteTransmitter(Context context, BluetoothStateManager bluetoothStateManager, BeaconCodes beaconCodes, TimeInterval updateCodeAfter) {
         this.context = context;
+        this.bluetoothStateManager = bluetoothStateManager;
         this.beaconCodes = beaconCodes;
         this.updateCodeAfter = updateCodeAfter;
         this.handler = new Handler(Looper.getMainLooper());
@@ -154,6 +155,11 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
     }
 
     @Override
+    public boolean isSupported() {
+        return bluetoothLeAdvertiser != null;
+    }
+
+    @Override
     public BeaconCode beaconCode() {
         return beaconCode;
     }
@@ -197,11 +203,6 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
         return callback;
     }
 
-    private final static void stopAdvertising(final BluetoothLeAdvertiser bluetoothLeAdvertiser, final AdvertiseCallback advertiseCallback) {
-        bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
-        Logger.debug(tag, "Advert stopped");
-    }
-
     private final static BluetoothGattServer startGattServer(final Context context, final long serviceId) {
         final BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         if (bluetoothManager == null) {
@@ -242,11 +243,6 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
         server.set(bluetoothManager.openGattServer(context, callback));
         Logger.debug(tag, "GATT server started (serviceId={})", serviceId);
         return server.get();
-    }
-
-    private final static void stopGattServer(final BluetoothGattServer bluetoothGattServer) {
-        bluetoothGattServer.close();
-        Logger.debug(tag, "GATT server stopped");
     }
 
     private final static void setGattService(final Context context, final BluetoothGattServer bluetoothGattServer, final long serviceId, final BeaconCode beaconCode) {

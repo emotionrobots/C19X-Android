@@ -1,6 +1,6 @@
 package org.c19x.data.type;
 
-import org.c19x.util.Logger;
+import org.c19x.data.Logger;
 import org.json.JSONObject;
 
 import java.util.Map;

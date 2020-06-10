@@ -35,4 +35,11 @@ public interface Transmitter {
      * Get current beacon code.
      */
     BeaconCode beaconCode();
+
+    /**
+     * Is transmitter supported.
+     *
+     * @return
+     */
+    boolean isSupported();
 }
