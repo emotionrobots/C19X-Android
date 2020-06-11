@@ -1,7 +1,6 @@
 package org.c19x.beacon;
 
 import org.c19x.data.Logger;
-import org.c19x.data.PRNG;
 import org.c19x.data.primitive.Tuple;
 import org.c19x.data.type.BeaconCode;
 import org.c19x.data.type.BeaconCodeSeed;
@@ -9,17 +8,19 @@ import org.c19x.data.type.Day;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 
 public class ConcreteBeaconCodes implements BeaconCodes {
     private final static String tag = ConcreteBeaconCodes.class.getName();
     public final static int codesPerDay = 240;
-    private final PRNG prng = new PRNG();
+    private final SecureRandom secureRandom;
     private final DayCodes dayCodes;
     private BeaconCodeSeed seed = null;
     private BeaconCode[] values = null;
 
     public ConcreteBeaconCodes(final DayCodes dayCodes) {
         this.dayCodes = dayCodes;
+        secureRandom = getSecureRandom();
         get();
     }
 
@@ -50,12 +51,30 @@ public class ConcreteBeaconCodes implements BeaconCodes {
             return null;
         }
 
-        return values[prng.getInt(values.length)];
+        return values[secureRandom.nextInt(values.length)];
     }
 
     private final static long longValue(final byte[] hash) {
         final ByteBuffer byteBuffer = ByteBuffer.wrap(hash);
         return byteBuffer.getLong(0);
+    }
+
+    private final static SecureRandom getSecureRandom() {
+        try {
+            // Get an instance of the SUN SHA1 PRNG
+            final SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+            // Securely seed
+            final SecureRandom randomForSeeding = new SecureRandom();
+            // NIST SP800-90A suggests 440 bits for SHA1 seed
+            final byte[] seed = randomForSeeding.generateSeed(55);
+            random.setSeed(seed);
+            // Securely start
+            random.nextBytes(new byte[256 + random.nextInt(1024)]);
+            return random;
+        } catch (Exception e) {
+            Logger.error(tag, "Unable to initialise pseudo random number generator", e);
+            return null;
+        }
     }
 
     public final static BeaconCode[] beaconCodes(final BeaconCodeSeed beaconCodeSeed, final int count) {

@@ -1,6 +1,8 @@
 package org.c19x.data.type;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 public class Time {
     public Date value;
@@ -28,6 +30,24 @@ public class Time {
 
     public Time subtractingTimeInterval(TimeInterval timeInterval) {
         return new Time(value.getTime() - timeInterval.value * 1000);
+    }
+
+    public String description() {
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/YYYY hh:mm");
+        return simpleDateFormat.format(value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Time time = (Time) o;
+        return Objects.equals(value.getTime(), time.value.getTime());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value.getTime());
     }
 
     @Override

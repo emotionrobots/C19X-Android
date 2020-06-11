@@ -21,7 +21,7 @@ public class InfectionData {
                 try {
                     final BeaconCodeSeed beaconCodeSeed = new BeaconCodeSeed(Long.parseLong(k));
                     final String v = j.getString(k);
-                    final Status status = Status.forValue(Integer.parseInt(v));
+                    final Status status = Status.forRawValue(Integer.parseInt(v));
                     value.put(beaconCodeSeed, status);
                 } catch (Throwable e) {
                     Logger.warn(tag, "Failed to parse infection data (key={})", k, e);

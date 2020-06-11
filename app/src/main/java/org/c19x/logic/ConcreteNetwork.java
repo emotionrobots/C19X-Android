@@ -107,7 +107,7 @@ public class ConcreteNetwork implements Network {
     @Override
     public void postStatus(Status status, ContactPattern pattern, SerialNumber serialNumber, SharedSecret sharedSecret, BiConsumer<Status, Error> callback) {
         Logger.debug(tag, "Post status request (status={})", status);
-        final String value = Long.toString(getTimestamp()) + "|" + Integer.toString(Status.toValue(status)) + "|" + pattern.value;
+        final String value = Long.toString(getTimestamp()) + "|" + Integer.toString(Status.toRawValue(status)) + "|" + pattern.value;
         try {
             final String encrypted = AES.encrypt(sharedSecret, value);
             final String encoded = URLEncoder.encode(encrypted, "utf-8");
@@ -115,7 +115,7 @@ public class ConcreteNetwork implements Network {
             final StringRequest request = new StringRequest(Request.Method.POST, url, response -> {
                 try {
                     final int rawValue = Integer.parseInt(response);
-                    final Status remoteStatus = Status.forValue(rawValue);
+                    final Status remoteStatus = Status.forRawValue(rawValue);
                     Logger.debug(tag, "Post status successful (status={})", remoteStatus);
                     callback.accept(remoteStatus, null);
                 } catch (Throwable e) {

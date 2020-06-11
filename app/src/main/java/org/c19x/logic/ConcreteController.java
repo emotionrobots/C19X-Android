@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class ConcreteController implements Controller, ReceiverDelegate {
     private final static String tag = ConcreteController.class.getName();
-    public final Settings settings;
+    private final Settings settings;
     private final Context context;
     private final Database database;
     private final Network network;
@@ -45,16 +45,23 @@ public class ConcreteController implements Controller, ReceiverDelegate {
             settings.registrationState(RegistrationState.unregistered);
         }
         network = new ConcreteNetwork(context, settings);
-        database = new ConcreteDatabase(context);
+        database = new ConcreteDatabase(context, contacts -> {
+        });
         riskAnalysis = new ConcreteRiskAnalysis();
 
-        reset();
+        // TEST ONLY - REMOVE FOR PRODUCTION
+        //reset();
+    }
+
+    public Settings settings() {
+        return settings;
     }
 
     @Override
     public void reset() {
         settings.reset();
-        database.remove(new Time().advanced(TimeInterval.day));
+        database.remove(new Time().advanced(TimeInterval.day), contacts -> {
+        });
     }
 
     @Override
@@ -147,7 +154,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
             return;
         }
         transceiver = new ConcreteTransceiver(context, registration.sharedSecret, new TimeInterval(120));
-        transceiver.append(this);
+        transceiver.delegates.add(this);
         Logger.debug(tag, "Initialise transceiver successful (serialNumber={})", registration.serialNumber);
         delegates.forEach(d -> d.transceiver(transceiver));
     }
@@ -178,7 +185,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
     private void synchroniseStatus() {
         final Triple<Status, Time, Time> settingsStatus = settings.status();
         final ContactPattern pattern = settings.pattern();
-        if (settingsStatus == null || settingsStatus.b.value.getTime() == Time.distantPast.value.getTime()) {
+        if (settingsStatus == null || settingsStatus.b.equals(Time.distantPast)) {
             // Only share authorised status data (local time != distant past)
             return;
         }
@@ -280,17 +287,18 @@ public class ConcreteController implements Controller, ReceiverDelegate {
     private void applySettings() {
         // Enforce retention period
         final Time removeBefore = new Time().subtractingTimeInterval(settings.retentionPeriod());
-        database.remove(removeBefore);
-        final Time timestamp = (database.contacts.size() == 0 ? Time.distantPast : database.contacts.getLast().time);
-        settings.contacts(database.contacts.size(), timestamp);
-        delegates.forEach(d -> d.database(database.contacts));
+        database.remove(removeBefore, contacts -> {
+            final Time timestamp = (contacts.size() == 0 ? Time.distantPast : contacts.getLast().time);
+            settings.contacts(contacts.size(), timestamp);
+            delegates.forEach(d -> d.database(contacts));
 
-        // Conduct risk analysis
-        riskAnalysis.advice(database.contacts, settings, (advice, contactStatus, exposureOverTime, exposureProximity) -> {
-            settings.advice(advice);
-            settings.contacts(contactStatus);
-            settings.pattern(exposureProximity.contactPattern());
-            delegates.forEach(d -> d.advice(advice, contactStatus));
+            // Conduct risk analysis
+            riskAnalysis.advice(contacts, settings, (advice, contactStatus, exposureOverTime, exposureProximity) -> {
+                settings.advice(advice);
+                settings.contacts(contactStatus);
+                settings.pattern(exposureProximity.contactPattern());
+                delegates.forEach(d -> d.advice(advice, contactStatus));
+            });
         });
     }
 
@@ -298,10 +306,11 @@ public class ConcreteController implements Controller, ReceiverDelegate {
     // MARK:- ReceiverDelegate
 
     public void receiver(BeaconCode didDetect, RSSI rssi) {
-        database.insert(new Time(), didDetect, rssi);
-        final Time timestamp = settings.contacts(database.contacts.size());
-        Logger.debug(tag, "Contact logged (code={},rssi={},count={},timestamp={})", didDetect.value, rssi.value, database.contacts.size(), timestamp);
-        delegates.forEach(d -> d.transceiver(timestamp));
+        database.insert(new Time(), didDetect, rssi, contacts -> {
+            final Time timestamp = settings.contacts(database.contacts.size());
+            Logger.debug(tag, "Contact logged (code={},rssi={},count={},timestamp={})", didDetect.value, rssi.value, database.contacts.size(), timestamp);
+            delegates.forEach(d -> d.transceiver(timestamp));
+        });
     }
 
     public void receiver(BluetoothState didUpdateState) {

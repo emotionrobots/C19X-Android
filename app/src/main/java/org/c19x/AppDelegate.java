@@ -25,7 +25,7 @@ import org.c19x.logic.Controller;
 public class AppDelegate extends Application implements Application.ActivityLifecycleCallbacks {
     private final static String tag = AppDelegate.class.getName();
     private static AppDelegate appDelegate;
-    private Controller controller;
+    public Controller controller;
     // Detecting foreground/background
     private int activityReferences = 0;
     private boolean isActivityChangingConfigurations = false;

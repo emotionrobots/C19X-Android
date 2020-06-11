@@ -1,6 +1,5 @@
 package org.c19x.util.security;
 
-import org.c19x.data.PRNG;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;

@@ -33,8 +33,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate {
@@ -44,6 +48,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
     private final Context context;
     private final Transmitter transmitter;
     private final Handler handler;
+    private final ExecutorService operationQueue = Executors.newSingleThreadExecutor();
     private final Queue<ScanResult> scanResults = new ConcurrentLinkedQueue<>();
     private final BluetoothStateManager bluetoothStateManager;
     private BluetoothLeScanner bluetoothLeScanner;
@@ -99,7 +104,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         }
     }
 
-    private final void stopScan() {
+    private final void stopScan(Consumer<Boolean> callback) {
         if (bluetoothLeScanner == null) {
             Logger.warn(tag, "Bluetooth LE scanner unsupported");
             return;
@@ -111,11 +116,15 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         try {
             bluetoothLeScanner.stopScan(scanCallback);
             scanCallback = null;
-            final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            bluetoothAdapter.cancelDiscovery();
-            processScanResults(context, scanResults, transmitter);
+            operationQueue.execute(() -> {
+                final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                bluetoothAdapter.cancelDiscovery();
+                processScanResults(context, scanResults, transmitter);
+                callback.accept(true);
+            });
         } catch (Throwable e) {
             Logger.warn(tag, "Stop scan failed", e);
+            callback.accept(false);
         }
     }
 
@@ -141,7 +150,8 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
     @Override
     public void stop(String source) {
         enabled = false;
-        stopScan();
+        stopScan(success -> {
+        });
         Logger.debug(tag, "stop");
     }
 
@@ -151,15 +161,19 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         if (!enabled) {
             return;
         }
+
         startScan();
+        final int on = 4000;
+        final int off = 2000;
         handler.postDelayed(() -> {
-            stopScan();
-            if (enabled) {
-                handler.postDelayed(() -> {
-                    scan("schedule");
-                }, 8000);
-            }
-        }, 8000);
+            stopScan(success -> {
+                if (enabled) {
+                    handler.postDelayed(() -> {
+                        scan("schedule");
+                    }, off);
+                }
+            });
+        }, on);
     }
 
     @Override
@@ -188,7 +202,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         final ScanCallback callback = new ScanCallback() {
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
-                Logger.debug(tag, "Scan result (result={})", result);
+                // Logger.debug(tag, "Scan result (result={})", result);
                 scanResults.add(result);
             }
 
@@ -317,13 +331,15 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         };
         final BluetoothGatt gatt = scanResultForProcessing.scanResult.getDevice().connectGatt(context, false, callback);
         try {
-            final Long transmitterBeaconCode = future.get(8, TimeUnit.SECONDS);
+            final Long transmitterBeaconCode = future.get(10, TimeUnit.SECONDS);
             if (transmitterBeaconCode != null) {
                 Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", transmitterBeaconCode, rssi);
                 delegates.forEach(d -> d.receiver(new BeaconCode(transmitterBeaconCode.longValue()), new RSSI(rssi)));
             }
+        } catch (TimeoutException e) {
+            Logger.warn(tag, "GATT client timeout", e);
         } catch (Throwable e) {
-            Logger.debug(tag, "GATT client timeout");
+            Logger.warn(tag, "GATT client exception", e);
         }
         if (gattOpen.compareAndSet(true, false)) {
             try {

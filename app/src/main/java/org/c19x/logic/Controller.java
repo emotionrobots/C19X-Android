@@ -1,5 +1,6 @@
 package org.c19x.logic;
 
+import org.c19x.data.Settings;
 import org.c19x.data.type.Status;
 
 import java.util.Queue;
@@ -8,6 +9,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public interface Controller {
     /// Delegates for receiving application events.
     Queue<ControllerDelegate> delegates = new ConcurrentLinkedQueue<>();
+
+    Settings settings();
 
     /**
      * Reset all application data.

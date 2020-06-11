@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="org.c19x">
+
     <!-- Must support Bluetooth LE -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
@@ -18,17 +19,14 @@
         android:name=".AppDelegate"
         android:allowBackup="true"
         android:icon="@mipmap/ic_virus"
-        android:label="@string/app_name"
+        android:label="@string/appName"
         android:roundIcon="@mipmap/ic_virus_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-
-        <service android:name=".service.BeaconService" />
-
         <activity
-            android:name=".gui.TestActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:name=".gui.MainActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:screenOrientation="portrait"
             tools:ignore="LockedOrientationActivity">
             <intent-filter>
@@ -38,18 +36,33 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".gui.Welcome"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity"></activity>
-        <activity
-            android:name=".gui.MainActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity" />
 
-        <receiver android:name=".old.data.GlobalStatusLogReceiver" />
+        <!--        <service android:name=".service.BeaconService" />-->
+
+        <!--        <activity-->
+        <!--            android:name=".gui.TestActivity"-->
+        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
+        <!--            android:screenOrientation="portrait"-->
+        <!--            tools:ignore="LockedOrientationActivity">-->
+        <!--            <intent-filter>-->
+        <!--                <action android:name="android.intent.action.MAIN" />-->
+
+        <!--                <category android:name="android.intent.category.LAUNCHER" />-->
+        <!--                <category android:name="android.intent.category.DEFAULT" />-->
+        <!--            </intent-filter>-->
+        <!--        </activity>-->
+        <!--        <activity-->
+        <!--            android:name=".gui.Welcome"-->
+        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
+        <!--            android:screenOrientation="portrait"-->
+        <!--            tools:ignore="LockedOrientationActivity" />-->
+        <!--        <activity-->
+        <!--            android:name=".gui.MainActivityOld"-->
+        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
+        <!--            android:screenOrientation="portrait"-->
+        <!--            tools:ignore="LockedOrientationActivity" />-->
+
+        <!--        <receiver android:name=".old.data.GlobalStatusLogReceiver" />-->
     </application>
 
 </manifest>

@@ -3,7 +3,7 @@ package org.c19x.data.type;
 public enum Status {
     healthy, symptomatic, confirmedDiagnosis, infectious;
 
-    public static Status forValue(int value) {
+    public static Status forRawValue(int value) {
         switch (value) {
             case 0:
                 return healthy;
@@ -18,7 +18,7 @@ public enum Status {
         }
     }
 
-    public static int toValue(Status status) {
+    public static int toRawValue(Status status) {
         switch (status) {
             case healthy:
                 return 0;

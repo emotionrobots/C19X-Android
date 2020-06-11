@@ -1,13 +1,14 @@
 <resources>
-    <string name="app_name">C19X</string>
-    <string name="app_fullname">COVID-19 Tracer</string>
-    <string name="app_notification">Scanning for other users in close proximity</string>
+    <string name="appName">C19X</string>
 
-    <string name="trial_title">Pre-release software</string>
-    <string name="trial_description">This is a preview of the COVID-19 Tracer app (2020-04-23) that is currently being developed and tested. Use at your own risk. You can uninstall the app at any time to remove all software and data.</string>
-
-    <string name="file_preferences">preferences</string>
-    <string name="file_registration">registration</string>
+    <string name="statusDescriptionNormal">I do not have a high temperature or a new continuous cough.</string>
+    <string name="statusDescriptionSymptoms">I have a high temperature and/or a new continuous cough.</string>
+    <string name="statusDescriptionDiagnosis">I have a confirmed diagnosis of Coronavirus (COVID-19).</string>
+    <string name="contactDescriptionHealthy">No report of COVID-19 symptoms or diagnosis has been shared.</string>
+    <string name="contactDescriptionInfectious">Report of COVID-19 symptoms or diagnosis has been shared.</string>
+    <string name="adviceDescriptionNormal">No restriction. COVID-19 is now under control, you can safely return to your normal activities.</string>
+    <string name="adviceDescriptionStayAtHome">Stay at home. Everyone must stay at home to help stop the spread of COVID-19.</string>
+    <string name="adviceDescriptionSelfIsolation">Self-isolation. Do not leave your home if you have symptoms or confirmed diagnosis of COVID-19 or been in prolonged close contact with someone who does.</string>
 
     <string name="welcome_title">COVID-19 Tracer</string>
     <string name="welcome_subtitle">Setting up your app...</string>
@@ -82,4 +83,7 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="title_activity_main">FullscreenActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
 </resources>
