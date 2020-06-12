@@ -164,7 +164,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
 
         startScan();
         final int on = 4000;
-        final int off = 2000;
+        final int off = 8000;
         handler.postDelayed(() -> {
             stopScan(success -> {
                 if (enabled) {

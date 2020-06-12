@@ -24,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+        <service android:name=".logic.ForegroundService" />
         <activity
             android:name=".gui.MainActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"

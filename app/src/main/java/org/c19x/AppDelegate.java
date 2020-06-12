@@ -16,8 +16,10 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import org.c19x.data.Logger;
+import org.c19x.data.primitive.Tuple;
 import org.c19x.logic.ConcreteController;
 import org.c19x.logic.Controller;
+import org.c19x.logic.ForegroundService;
 
 /**
  * Application and singletons.
@@ -32,25 +34,25 @@ public class AppDelegate extends Application implements Application.ActivityLife
     // Notifications
     private String notificationText = null;
 
-    private static PendingIntent globalStatusLogUpdateTask;
-
     @Override
     public void onCreate() {
         super.onCreate();
         appDelegate = this;
+        controller = new ConcreteController(getApplicationContext());
         registerActivityLifecycleCallbacks(this);
         createNotificationChannel();
-        controller = new ConcreteController(getApplicationContext());
+
+        final Intent intent = new Intent(this, ForegroundService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
     }
 
     public static AppDelegate getAppDelegate() {
         return appDelegate;
     }
-
-    /**
-     * Create notification
-     */
-
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             final int importance = NotificationManager.IMPORTANCE_DEFAULT;
@@ -61,15 +63,15 @@ public class AppDelegate extends Application implements Application.ActivityLife
         }
     }
 
-    public void notification(final String text) {
+    public Tuple<Integer, Notification> notification(final String text) {
         Logger.debug(tag, "notification (text={})", text);
+        final int notificationChannelId = "C19XNotificationChannel".hashCode();
         if (text != null) {
             if (!text.equals(notificationText)) {
                 createNotificationChannel();
                 final Intent intent = new Intent(getApplicationContext(), AppDelegate.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 final PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
-
                 final NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), "C19XNotificationChannel")
                         .setSmallIcon(R.drawable.virus)
                         .setContentTitle("C19X")
@@ -79,13 +81,15 @@ public class AppDelegate extends Application implements Application.ActivityLife
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);
                 final Notification notification = builder.build();
                 final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
-                notificationManager.notify("C19XNotificationChannel".hashCode(), notification);
+                notificationManager.notify(notificationChannelId, notification);
                 notificationText = text;
+                return new Tuple<>(notificationChannelId, notification);
             }
         } else {
             final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
             notificationManager.deleteNotificationChannel("C19XNotificationChannel");
         }
+        return new Tuple<>(notificationChannelId, null);
     }
 
 

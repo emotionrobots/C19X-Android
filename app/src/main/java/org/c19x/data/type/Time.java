@@ -33,7 +33,7 @@ public class Time {
     }
 
     public String description() {
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/YYYY hh:mm");
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/YYYY HH:mm");
         return simpleDateFormat.format(value);
     }
 
