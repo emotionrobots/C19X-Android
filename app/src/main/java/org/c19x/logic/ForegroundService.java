@@ -8,13 +8,29 @@ import android.os.IBinder;
 import org.c19x.AppDelegate;
 import org.c19x.data.Logger;
 import org.c19x.data.primitive.Tuple;
+import org.c19x.data.type.Time;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ForegroundService extends Service {
     private final static String tag = ForegroundService.class.getName();
+    private ScheduledExecutorService scheduledExecutorService;
+
+    private void scheduleUpdate() {
+        scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        scheduledExecutorService.scheduleAtFixedRate(
+                () -> {
+                    Logger.debug(tag, "Background app refresh (time={})", new Time().description());
+                    AppDelegate.getAppDelegate().controller.synchronise(false);
+                }, 5, 5, TimeUnit.MINUTES);
+    }
 
     @Override
     public void onCreate() {
         Logger.debug(tag, "onCreate");
+        scheduleUpdate();
         super.onCreate();
     }
 
@@ -30,6 +46,8 @@ public class ForegroundService extends Service {
     @Override
     public void onDestroy() {
         Logger.debug(tag, "onDestroy");
+        scheduledExecutorService.shutdown();
+        scheduledExecutorService = null;
         super.onDestroy();
     }
 
