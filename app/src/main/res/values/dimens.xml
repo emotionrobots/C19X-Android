@@ -1,21 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="marginHalf">4sp</dimen>
     <dimen name="marginSingle">8sp</dimen>
-    <dimen name="marginDouble">16sp</dimen>
+    <dimen name="marginDouble">20sp</dimen>
 
     <dimen name="textTitle">26sp</dimen>
-    <dimen name="textDescription">22sp</dimen>
-    <dimen name="textLastUpdate">18sp</dimen>
-    <dimen name="textContactValue">38sp</dimen>
-
-    <dimen name="textExtraLarge">32sp</dimen>
-    <dimen name="textLarge">26sp</dimen>
-    <dimen name="textMedium">20sp</dimen>
-    <dimen name="textSmall">12sp</dimen>
-    <dimen name="marginExtraLarge">40dp</dimen>
-    <dimen name="marginLarge">20dp</dimen>
-    <dimen name="marginMedium">10dp</dimen>
-    <dimen name="marginSmall">5dp</dimen>
-    <dimen name="marginTiny">2dp</dimen>
-    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="textDescription">21sp</dimen>
+    <dimen name="textLastUpdate">17sp</dimen>
+    <dimen name="textContactValue">34sp</dimen>
 </resources>

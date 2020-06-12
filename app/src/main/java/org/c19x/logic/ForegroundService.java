@@ -14,13 +14,14 @@ public class ForegroundService extends Service {
 
     @Override
     public void onCreate() {
+        Logger.debug(tag, "onCreate");
         super.onCreate();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Logger.debug(tag, "Foreground service onStartCommand");
-        final Tuple<Integer, Notification> notification = AppDelegate.getAppDelegate().notification("Contact tracing");
+        Logger.debug(tag, "onStartCommand");
+        final Tuple<Integer, Notification> notification = AppDelegate.getAppDelegate().notification("Contact Tracing Enabled", "Turn off Bluetooth to pause.");
         startForeground(notification.a, notification.b);
         super.onStartCommand(intent, flags, startId);
         return START_STICKY;
@@ -28,7 +29,7 @@ public class ForegroundService extends Service {
 
     @Override
     public void onDestroy() {
-        AppDelegate.getAppDelegate().onTerminate();
+        Logger.debug(tag, "onDestroy");
         super.onDestroy();
     }
 

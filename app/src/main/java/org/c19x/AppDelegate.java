@@ -36,6 +36,7 @@ public class AppDelegate extends Application implements Application.ActivityLife
 
     @Override
     public void onCreate() {
+        Logger.debug(tag, "onCreate");
         super.onCreate();
         appDelegate = this;
         controller = new ConcreteController(getApplicationContext());
@@ -50,9 +51,18 @@ public class AppDelegate extends Application implements Application.ActivityLife
         }
     }
 
+    @Override
+    public void onTerminate() {
+        Logger.debug(tag, "onTerminate");
+        final Intent intent = new Intent(this, ForegroundService.class);
+        stopService(intent);
+        super.onTerminate();
+    }
+
     public static AppDelegate getAppDelegate() {
         return appDelegate;
     }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             final int importance = NotificationManager.IMPORTANCE_DEFAULT;
@@ -63,26 +73,26 @@ public class AppDelegate extends Application implements Application.ActivityLife
         }
     }
 
-    public Tuple<Integer, Notification> notification(final String text) {
-        Logger.debug(tag, "notification (text={})", text);
+    public Tuple<Integer, Notification> notification(final String title, final String body) {
+        Logger.debug(tag, "notification (title={},body={})", title, body);
         final int notificationChannelId = "C19XNotificationChannel".hashCode();
-        if (text != null) {
-            if (!text.equals(notificationText)) {
+        if (body != null) {
+            if (!body.equals(notificationText)) {
                 createNotificationChannel();
                 final Intent intent = new Intent(getApplicationContext(), AppDelegate.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 final PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
                 final NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), "C19XNotificationChannel")
                         .setSmallIcon(R.drawable.virus)
-                        .setContentTitle("C19X")
-                        .setContentText(text)
+                        .setContentTitle(title)
+                        .setContentText(body)
                         .setContentIntent(pendingIntent)
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);
                 final Notification notification = builder.build();
                 final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
                 notificationManager.notify(notificationChannelId, notification);
-                notificationText = text;
+                notificationText = body;
                 return new Tuple<>(notificationChannelId, notification);
             }
         } else {
@@ -92,38 +102,7 @@ public class AppDelegate extends Application implements Application.ActivityLife
         return new Tuple<>(notificationChannelId, null);
     }
 
-
-    //    /**
-//     * Schedule daily task to update global status log.
-//     */
-//    public final static void startGlobalStatusLogAutomaticUpdate() {
-//        if (globalStatusLogUpdateTask == null) {
-//            // Randomised update time between 00:00 and 04:59
-//            final Random random = new Random();
-//            final Calendar updateTime = Calendar.getInstance();
-//            updateTime.setTimeZone(TimeZone.getTimeZone("GMT"));
-//            updateTime.set(Calendar.HOUR_OF_DAY, random.nextInt(4));
-//            updateTime.set(Calendar.MINUTE, random.nextInt(59));
-//
-//            // Set alarm
-//            final Intent intent = new Intent(getContext(), GlobalStatusLogReceiver.class);
-//            globalStatusLogUpdateTask = PendingIntent.getBroadcast(getContext(), 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
-//            final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
-//            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, globalStatusLogUpdateTask);
-//        }
-//    }
-//
-//    /**
-//     * Cancel daily task to update global status log.
-//     */
-//    public final static void stopGlobalStatusLogAutomaticUpdate() {
-//        if (globalStatusLogUpdateTask != null) {
-//            final AlarmManager alarmManager = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
-//            alarmManager.cancel(globalStatusLogUpdateTask);
-//            globalStatusLogUpdateTask = null;
-//        }
-//    }
-//
+    // MARK:- Application.ActivityLifecycleCallbacks
 
     @Override
     public void onActivityStarted(@NonNull Activity activity) {

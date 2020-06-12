@@ -82,7 +82,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             return;
         }
         bluetoothStateManager.delegates.add(this);
-        bluetoothManager(bluetoothStateManager.state());
+        bluetoothStateManager(bluetoothStateManager.state());
     }
 
     private final void startScan() {
@@ -97,11 +97,13 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         if (!enabled) {
             return;
         }
-        try {
-            scanCallback = startScan(bluetoothLeScanner, scanResults);
-        } catch (Throwable e) {
-            Logger.warn(tag, "Start scan failed", e);
-        }
+        operationQueue.execute(() -> {
+            try {
+                scanCallback = startScan(bluetoothLeScanner, scanResults);
+            } catch (Throwable e) {
+                Logger.warn(tag, "Start scan failed", e);
+            }
+        });
     }
 
     private final void stopScan(Consumer<Boolean> callback) {
@@ -111,6 +113,10 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         }
         if (scanCallback == null) {
             Logger.warn(tag, "Already stopped");
+            return;
+        }
+        if (bluetoothStateManager.state() == BluetoothState.poweredOff) {
+            Logger.warn(tag, "Bluetooth is powered off");
             return;
         }
         try {
@@ -177,7 +183,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
     }
 
     @Override
-    public void bluetoothManager(BluetoothState didUpdateState) {
+    public void bluetoothStateManager(BluetoothState didUpdateState) {
         Logger.debug(tag, "Update state (state={})", didUpdateState);
         if (didUpdateState == BluetoothState.poweredOn) {
             start("didUpdateState|poweredOn");
@@ -205,7 +211,6 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                 // Logger.debug(tag, "Scan result (result={})", result);
                 scanResults.add(result);
             }
-
             @Override
             public void onScanFailed(int errorCode) {
                 Logger.warn(tag, "Scan failed (error={})", onScanFailedErrorCodeToString(errorCode));
@@ -239,7 +244,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                 .sorted((a, b) -> Integer.compare(b.getRssi(), a.getRssi()))
                 .map(r -> new ScanResultForProcessing(ScanResultType.ANDROID, r))
                 .collect(Collectors.toList());
-
+        scanResults.clear();
 
         final Set<BluetoothDevice> devices = new HashSet<>();
         for (ScanResultForProcessing scanResultForProcessing : scanResultsAndroid) {
@@ -261,8 +266,6 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                 devices.add(scanResultForProcessing.scanResult.getDevice());
             }
         }
-
-        scanResults.clear();
     }
 
     private final static void processScanResult(final Context context, final ScanResultForProcessing scanResultForProcessing, final long serviceId, final Transmitter transmitter) {

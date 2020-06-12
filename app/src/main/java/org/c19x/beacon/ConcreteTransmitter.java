@@ -72,7 +72,7 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
             return;
         }
         bluetoothStateManager.delegates.add(this);
-        bluetoothManager(bluetoothStateManager.state());
+        bluetoothStateManager(bluetoothStateManager.state());
         scheduleUpdateBeaconCode(updateCodeAfter);
     }
 
@@ -165,7 +165,7 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
     }
 
     @Override
-    public void bluetoothManager(BluetoothState didUpdateState) {
+    public void bluetoothStateManager(BluetoothState didUpdateState) {
         Logger.debug(tag, "Update state (state={})", didUpdateState);
         if (didUpdateState == BluetoothState.poweredOn) {
             start("didUpdateState|poweredOn");

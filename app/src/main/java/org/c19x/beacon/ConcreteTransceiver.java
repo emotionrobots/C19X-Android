@@ -9,7 +9,7 @@ import org.c19x.data.type.RSSI;
 import org.c19x.data.type.SharedSecret;
 import org.c19x.data.type.TimeInterval;
 
-public class ConcreteTransceiver implements Transceiver, ReceiverDelegate {
+public class ConcreteTransceiver implements Transceiver, ReceiverDelegate, BluetoothStateManagerDelegate {
     private final static String tag = ConcreteTransceiver.class.getName();
     private final DayCodes dayCodes;
     private final BeaconCodes beaconCodes;
@@ -23,6 +23,7 @@ public class ConcreteTransceiver implements Transceiver, ReceiverDelegate {
         bluetoothStateManager = new ConcreteBluetoothStateManager(context);
         transmitter = new ConcreteTransmitter(context, bluetoothStateManager, beaconCodes, codeUpdateAfter);
         receiver = new ConcreteReceiver(context, bluetoothStateManager, transmitter);
+        bluetoothStateManager.delegates.add(this);
         transmitter.delegates.add(this);
         receiver.delegates.add(this);
     }
@@ -41,13 +42,21 @@ public class ConcreteTransceiver implements Transceiver, ReceiverDelegate {
 
     @Override
     public void receiver(BeaconCode didDetect, RSSI rssi) {
-        Logger.debug(tag, "receiver(didDetect={},rssi={})", didDetect, rssi);
+        Logger.debug(tag, "receiver (didDetect={},rssi={})", didDetect, rssi);
         delegates.forEach(d -> d.receiver(didDetect, rssi));
     }
 
     @Override
     public void receiver(BluetoothState didUpdateTo) {
-        Logger.debug(tag, "receiver(didUpdateTo={})", didUpdateTo);
+        Logger.debug(tag, "receiver (didUpdateTo={})", didUpdateTo);
         delegates.forEach(d -> d.receiver(didUpdateTo));
+    }
+
+    // MARK:- BluetoothStateManagerDelegate
+
+    @Override
+    public void bluetoothStateManager(BluetoothState didUpdateState) {
+        Logger.debug(tag, "bluetoothStateManager (didUpdateTo={})", didUpdateState);
+        receiver(didUpdateState);
     }
 }

@@ -26,12 +26,12 @@ public class ConcreteBluetoothStateManager implements BluetoothStateManager {
                         case BluetoothAdapter.STATE_ON:
                             Logger.debug(tag, "Power ON");
                             state = BluetoothState.poweredOn;
-                            delegates.forEach(d -> d.bluetoothManager(BluetoothState.poweredOn));
+                            delegates.forEach(d -> d.bluetoothStateManager(BluetoothState.poweredOn));
                             break;
                         case BluetoothAdapter.STATE_OFF:
                             Logger.debug(tag, "Power OFF");
                             state = BluetoothState.poweredOff;
-                            delegates.forEach(d -> d.bluetoothManager(BluetoothState.poweredOff));
+                            delegates.forEach(d -> d.bluetoothStateManager(BluetoothState.poweredOff));
                             break;
                     }
                 } catch (Throwable e) {

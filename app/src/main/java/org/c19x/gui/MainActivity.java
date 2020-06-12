@@ -98,6 +98,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
             wakeLock = null;
         }
         controller.delegates.remove(this);
+        AppDelegate.getAppDelegate().onTerminate();
         super.onDestroy();
     }
 
@@ -164,7 +165,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
                     statusSelector(setTo);
                     statusDescription(setTo);
                     statusLastUpdate.setText(statusLastUpdateText);
-                    statusLastUpdate.setVisibility(statusLastUpdateText.isEmpty() ? View.GONE : View.VISIBLE);
+                    statusLastUpdate.setHeight(statusLastUpdateText.isEmpty() ? 0 : statusLastUpdate.getLineHeight());
                 });
             }
             if (contacts) {
@@ -177,7 +178,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
                     contactValue.setText(contactValueText);
                     contactValueUnit.setText(contactValueUnitText);
                     contactLastUpdate.setText(contactLastUpdateText);
-                    contactLastUpdate.setVisibility(contactLastUpdateText.isEmpty() ? View.GONE : View.VISIBLE);
+                    contactLastUpdate.setHeight(contactLastUpdateText.isEmpty() ? 0 : contactLastUpdate.getLineHeight());
                     contactDescription(setTo);
                 });
             }
@@ -220,10 +221,10 @@ public class MainActivity extends Activity implements ControllerDelegate {
     private void contactDescription(Status setTo) {
         if (setTo == Status.healthy) {
             contactDescription.setText(R.string.contactDescriptionHealthy);
-            contactDescriptionStatus.setBackgroundResource(R.color.colorGreen);
+            contactDescriptionStatus.setBackgroundResource(R.color.systemGreen);
         } else {
             contactDescription.setText(R.string.contactDescriptionInfectious);
-            contactDescriptionStatus.setBackgroundResource(R.color.colorRed);
+            contactDescriptionStatus.setBackgroundResource(R.color.systemRed);
         }
     }
 
@@ -231,17 +232,17 @@ public class MainActivity extends Activity implements ControllerDelegate {
         switch (setTo) {
             case normal: {
                 adviceDescription.setText(R.string.adviceDescriptionNormal);
-                adviceDescriptionStatus.setBackgroundResource(R.color.colorGreen);
+                adviceDescriptionStatus.setBackgroundResource(R.color.systemGreen);
                 break;
             }
             case stayAtHome: {
                 adviceDescription.setText(R.string.adviceDescriptionStayAtHome);
-                adviceDescriptionStatus.setBackgroundResource(R.color.colorAmber);
+                adviceDescriptionStatus.setBackgroundResource(R.color.systemOrange);
                 break;
             }
             case selfIsolation: {
                 adviceDescription.setText(R.string.adviceDescriptionSelfIsolation);
-                adviceDescriptionStatus.setBackgroundResource(R.color.colorRed);
+                adviceDescriptionStatus.setBackgroundResource(R.color.systemRed);
                 break;
             }
         }
@@ -317,7 +318,23 @@ public class MainActivity extends Activity implements ControllerDelegate {
 
     @Override
     public void transceiver(BluetoothState didUpdateState) {
-
+        Logger.debug(tag, "transceiver did update state (state={})", didUpdateState);
+        switch (didUpdateState) {
+            case poweredOn: {
+                AppDelegate.getAppDelegate().notification("Contact Tracing Enabled", "Turn OFF Bluetooth to pause.");
+                break;
+            }
+            case poweredOff: {
+                AppDelegate.getAppDelegate().notification("Contact Tracing Disabled", "Turn ON Bluetooth to resume.");
+                break;
+            }
+            case unsupported: {
+                AppDelegate.getAppDelegate().notification("Contact Tracing Disabled", "Bluetooth unavailable on device.");
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     @Override

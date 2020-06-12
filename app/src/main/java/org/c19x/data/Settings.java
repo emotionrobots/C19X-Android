@@ -378,8 +378,8 @@ public class Settings {
     public ServerAddress server() {
         final String value = get(keySettingsServer);
         if (value == null) {
-            return new ServerAddress("https://c19x-dev.servehttp.com/");
-            //return new ServerAddress("https://preprod.c19x.org/");
+            //return new ServerAddress("https://c19x-dev.servehttp.com/");
+            return new ServerAddress("https://preprod.c19x.org/");
         }
         return new ServerAddress(value);
     }

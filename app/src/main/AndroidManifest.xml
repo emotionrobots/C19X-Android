@@ -6,12 +6,14 @@
     <!-- Must support Bluetooth LE -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
-        android:required="true" /> <!-- Permissions for bluetooth discovery -->
+        android:required="true" />
+    <!-- Permissions for bluetooth discovery -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" /> <!-- Permissions for data network -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Permissions for data network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -37,33 +39,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <!--        <service android:name=".service.BeaconService" />-->
-
-        <!--        <activity-->
-        <!--            android:name=".gui.TestActivity"-->
-        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
-        <!--            android:screenOrientation="portrait"-->
-        <!--            tools:ignore="LockedOrientationActivity">-->
-        <!--            <intent-filter>-->
-        <!--                <action android:name="android.intent.action.MAIN" />-->
-
-        <!--                <category android:name="android.intent.category.LAUNCHER" />-->
-        <!--                <category android:name="android.intent.category.DEFAULT" />-->
-        <!--            </intent-filter>-->
-        <!--        </activity>-->
-        <!--        <activity-->
-        <!--            android:name=".gui.Welcome"-->
-        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
-        <!--            android:screenOrientation="portrait"-->
-        <!--            tools:ignore="LockedOrientationActivity" />-->
-        <!--        <activity-->
-        <!--            android:name=".gui.MainActivityOld"-->
-        <!--            android:configChanges="keyboardHidden|orientation|screenSize"-->
-        <!--            android:screenOrientation="portrait"-->
-        <!--            tools:ignore="LockedOrientationActivity" />-->
-
-        <!--        <receiver android:name=".old.data.GlobalStatusLogReceiver" />-->
     </application>
 
 </manifest>

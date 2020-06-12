@@ -12,14 +12,6 @@
     <color name="systemOrange">#ff9500</color>
     <color name="systemRed">#ff3b30</color>
 
-    <color name="colorWhite">#FFFFFF</color>
-    <color name="colorGrey">#DDDDDD</color>
-    <color name="colorDarkGrey">#555555</color>
-    <color name="colorBlack">#000000</color>
-    <color name="colorGreen">#007E00</color>
-    <color name="colorAmber">#FF7E00</color>
-    <color name="colorRed">#7E0000</color>
-
-    <color name="black_overlay">#66000000</color>
+    <color name="iconBackground">#76D6FF</color>
 
 </resources>
