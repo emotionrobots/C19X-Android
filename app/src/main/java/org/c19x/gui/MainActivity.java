@@ -7,6 +7,8 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -89,6 +91,9 @@ public class MainActivity extends Activity implements ControllerDelegate {
         enableStatusSelector();
         controller.delegates.add(this);
         updateViewData(true, true, true);
+
+        enableImmediateUpdate();
+        enableExportContacts();
     }
 
     @Override
@@ -359,5 +364,65 @@ public class MainActivity extends Activity implements ControllerDelegate {
     public void advice(Advice didUpdateTo, Status contactStatus) {
         Logger.debug(tag, "Advice did update");
         updateViewData(false, true, true);
+    }
+
+    // MARK:- Enable immediate update by double tapping on advice view
+
+    private void enableImmediateUpdate() {
+        final GestureDetector doubleTapGestureRecognizer = new GestureDetector(getApplicationContext(), new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                Logger.debug(tag, "Immediate update requested");
+                controller.synchronise(true);
+                return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                super.onLongPress(e);
+            }
+
+            @Override
+            public boolean onDoubleTapEvent(MotionEvent e) {
+                return true;
+            }
+
+            @Override
+            public boolean onDown(MotionEvent e) {
+                return true;
+            }
+        });
+        final View view = findViewById(R.id.ViewBottom);
+        view.setOnTouchListener((v, event) -> doubleTapGestureRecognizer.onTouchEvent(event));
+    }
+
+    // MARK:- Enable export by double tapping on contact view
+
+    private void enableExportContacts() {
+        final GestureDetector doubleTapGestureRecognizer = new GestureDetector(getApplicationContext(), new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                Logger.debug(tag, "Export requested");
+                controller.export();
+                return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                super.onLongPress(e);
+            }
+
+            @Override
+            public boolean onDoubleTapEvent(MotionEvent e) {
+                return true;
+            }
+
+            @Override
+            public boolean onDown(MotionEvent e) {
+                return true;
+            }
+        });
+        final View view = findViewById(R.id.ViewMiddle);
+        view.setOnTouchListener((v, event) -> doubleTapGestureRecognizer.onTouchEvent(event));
     }
 }
