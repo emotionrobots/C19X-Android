@@ -217,8 +217,8 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
         final BluetoothGattServerCallback callback = new BluetoothGattServerCallback() {
             @Override
             public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
-//                Logger.debug(tag, "GATT server connection state change (device={},status={},newState={})",
-//                        device, status, onConnectionStateChangeStatusToString(newState));
+                Logger.debug(tag, "GATT server connection state change (device={},status={},newState={})",
+                        device, status, onConnectionStateChangeStatusToString(newState));
             }
 
             @Override

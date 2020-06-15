@@ -367,7 +367,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         };
         final BluetoothGatt gatt = beacon.peripheral.connectGatt(context, false, callback);
         try {
-            final BeaconCode transmitterBeaconCode = future.get(10, TimeUnit.SECONDS);
+            final BeaconCode transmitterBeaconCode = future.get(20, TimeUnit.SECONDS);
             if (transmitterBeaconCode != null) {
                 Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", transmitterBeaconCode, beacon.getRssi());
                 delegates.forEach(d -> d.receiver(transmitterBeaconCode, beacon.getRssi()));
