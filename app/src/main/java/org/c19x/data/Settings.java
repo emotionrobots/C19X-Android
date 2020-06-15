@@ -567,7 +567,7 @@ public class Settings {
         }
     }
 
-    public final static boolean write(final Context context, final String filename, final String value) {
+    private final static boolean write(final Context context, final String filename, final String value) {
         try {
             final FileOutputStream fileOutputStream = context.openFileOutput(filename, Context.MODE_PRIVATE);
             fileOutputStream.write(value.getBytes());

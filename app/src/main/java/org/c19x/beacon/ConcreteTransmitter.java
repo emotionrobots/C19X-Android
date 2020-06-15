@@ -161,6 +161,9 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
 
     @Override
     public BeaconCode beaconCode() {
+        if (beaconCode == null) {
+            beaconCode = beaconCodes.get();
+        }
         return beaconCode;
     }
 

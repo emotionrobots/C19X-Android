@@ -1,6 +1,8 @@
 package org.c19x.logic;
 
 import android.content.Context;
+import android.media.MediaScannerConnection;
+import android.os.Environment;
 
 import org.c19x.beacon.ConcreteTransceiver;
 import org.c19x.beacon.ReceiverDelegate;
@@ -26,6 +28,8 @@ import org.c19x.data.type.Time;
 import org.c19x.data.type.TimeInterval;
 import org.c19x.data.type.TimeMillis;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.stream.Collectors;
 
@@ -108,8 +112,41 @@ public class ConcreteController implements Controller, ReceiverDelegate {
         final String string = database.contacts.stream()
                 .map(contact -> dateFormatter.format(contact.time.value) + "," + Integer.toString(contact.rssi.value))
                 .collect(Collectors.joining("\n"));
-        Settings.write(context, "contacts.csv", string);
+        try {
+            final File folder = new File(getRootFolder(context), "C19X");
+            if (!folder.exists()) {
+                folder.mkdirs();
+                Logger.debug(tag, "Created folder (folder={})", folder);
+            }
+            final File file = new File(folder, "contacts.csv");
+            final FileOutputStream fileOutputStream = new FileOutputStream(file);
+            MediaScannerConnection.scanFile(context, new String[]{file.getAbsolutePath()}, null, null);
+            fileOutputStream.write(string.getBytes());
+            fileOutputStream.flush();
+            fileOutputStream.close();
+            Logger.warn(tag, "Export successful (file={})", file);
+        } catch (Throwable e) {
+            Logger.warn(tag, "Export failed", e);
+        }
     }
+
+    /**
+     * Get root folder for SD card or emulated external storage.
+     *
+     * @param context
+     * @return
+     */
+    private final static File getRootFolder(final Context context) {
+        // Get SD card or emulated external storage. By convention (really!?)
+        // SD card is reported after emulated storage, so select the last folder
+        final File[] externalMediaDirs = context.getExternalMediaDirs();
+        if (externalMediaDirs.length > 0) {
+            return externalMediaDirs[externalMediaDirs.length - 1];
+        } else {
+            return Environment.getExternalStorageDirectory();
+        }
+    }
+
 
     // MARK:- Internal functions
 
