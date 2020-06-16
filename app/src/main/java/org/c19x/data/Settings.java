@@ -74,6 +74,9 @@ public class Settings {
     public Settings(Context context) {
         this.context = context;
         sharedPreferences = context.getSharedPreferences("C19X", Context.MODE_PRIVATE);
+
+        // TEST ONLY - REMOVE FOR PRODUCTION
+        //reset();
     }
 
     public void reset() {

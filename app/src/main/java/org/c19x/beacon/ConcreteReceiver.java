@@ -297,7 +297,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         Logger.debug(tag, "Processing beacon (uuid={},type={},code={},rssi={})", beacon.uuid(), beacon.getBeaconType(), beacon.getCode(), beacon.getRssi());
 
         // Beacon has all information
-        if (transmitter.isSupported() && beacon.isReady()) {
+        if (beacon.isReady() && transmitter.isSupported()) {
             Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", beacon.getCode(), beacon.getRssi());
             delegates.forEach(d -> d.receiver(beacon.getCode(), beacon.getRssi()));
             return;
@@ -368,9 +368,9 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         final BluetoothGatt gatt = beacon.peripheral.connectGatt(context, false, callback);
         try {
             final BeaconCode transmitterBeaconCode = future.get(20, TimeUnit.SECONDS);
-            if (transmitterBeaconCode != null) {
-                Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", transmitterBeaconCode, beacon.getRssi());
-                delegates.forEach(d -> d.receiver(transmitterBeaconCode, beacon.getRssi()));
+            if (beacon.isReady()) {
+                Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", beacon.getCode(), beacon.getRssi());
+                delegates.forEach(d -> d.receiver(beacon.getCode(), beacon.getRssi()));
             }
         } catch (TimeoutException e) {
             Logger.warn(tag, "GATT client timeout", e);
