@@ -42,7 +42,7 @@ public class ConcreteBeaconCodes implements BeaconCodes {
             return null;
         }
         if (values == null || seed.value != seedToday.a.value) {
-            Logger.debug(tag, "Generating beacon codes for new day (day={})", dayCodes.day().value);
+            Logger.debug(tag, "Generating beacon codes for new day (day={},seed={})", dayCodes.day().value, seedToday.a);
             seed = seedToday.a;
             values = beaconCodes(seed, codesPerDay);
         }

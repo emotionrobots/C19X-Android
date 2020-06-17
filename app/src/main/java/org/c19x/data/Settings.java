@@ -170,6 +170,7 @@ public class Settings {
     public void registration(SerialNumber serialNumber, SharedSecret sharedSecret) {
         setEncrypted(Long.toString(serialNumber.value), keyRegistrationSerialNumber);
         setEncrypted(Base64.encodeToString(sharedSecret.value, Base64.DEFAULT), keyRegistrationSharedSecret);
+        registrationState(RegistrationState.registered);
     }
 
     /**
