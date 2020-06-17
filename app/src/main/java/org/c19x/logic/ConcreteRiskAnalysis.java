@@ -86,11 +86,12 @@ public class ConcreteRiskAnalysis implements RiskAnalysis {
             }
             // Regenerate beacon codes based on seed
             final BeaconCode[] beaconCodesForMatching = ConcreteBeaconCodes.beaconCodes(beaconCodeSeed, ConcreteBeaconCodes.codesPerDay);
-            for (BeaconCode beaconCode : beaconCodesForMatching) {
+            for (int i = 0; i < beaconCodesForMatching.length; i++) {
+                final BeaconCode beaconCode = beaconCodesForMatching[i];
                 final Collection<Contact> contacts = beacons.get(beaconCode);
                 if (contacts == null) {
                     // Unmatched
-                    return;
+                    continue;
                 }
                 contacts.forEach(contact -> {
                     final ExposurePeriod exposurePeriod = new ExposurePeriod((int) (contact.time.timeIntervalSinceNow().value / TimeInterval.minute.value));
