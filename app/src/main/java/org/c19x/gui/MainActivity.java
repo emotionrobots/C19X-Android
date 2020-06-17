@@ -92,6 +92,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
         controller.delegates.add(this);
         updateViewData(true, true, true);
 
+        // TODO : CONSIDER REMOVAL FOR PRODUCTION
         enableImmediateUpdate();
         enableExportContacts();
     }
