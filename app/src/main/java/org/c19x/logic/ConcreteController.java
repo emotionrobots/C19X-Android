@@ -31,6 +31,8 @@ import org.c19x.data.type.TimeMillis;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.stream.Collectors;
 
 public class ConcreteController implements Controller, ReceiverDelegate {
@@ -201,7 +203,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
      */
     private void synchroniseTime(boolean immediately) {
         final Tuple<TimeMillis, Time> settingsTimeDelta = settings.timeDelta();
-        if (!(immediately || settingsTimeDelta == null || -settingsTimeDelta.b.timeIntervalSinceNow().value > TimeInterval.day.value)) {
+        if (!(immediately || settingsTimeDelta == null || oncePerDay(settingsTimeDelta.b))) {
             Logger.debug(tag, "Synchronise time deferred (timestamp={})", settingsTimeDelta.b);
             return;
         }
@@ -255,7 +257,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
      */
     private void synchroniseMessage(boolean immediately) {
         final Tuple<Message, Time> settingsMessage = settings.message();
-        if (!(immediately || settingsMessage == null || -settingsMessage.b.timeIntervalSinceNow().value > TimeInterval.day.value)) {
+        if (!(immediately || settingsMessage == null || oncePerDay(settingsMessage.b))) {
             Logger.debug(tag, "Synchronise message deferred (timestamp={})", settingsMessage.b);
             return;
         }
@@ -281,7 +283,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
      */
     private void synchroniseSettings(boolean immediately) {
         final Tuple<ServerSettings, Time> settingsServerSettings = settings.get();
-        if (!(immediately || settingsServerSettings == null || -settingsServerSettings.b.timeIntervalSinceNow().value > TimeInterval.day.value)) {
+        if (!(immediately || settingsServerSettings == null || oncePerDay(settingsServerSettings.b))) {
             Logger.debug(tag, "Synchronise settings deferred (timestamp={})", settingsServerSettings.b);
             return;
         }
@@ -302,7 +304,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
      */
     private void synchroniseInfectionData(boolean immediately) {
         final Tuple<InfectionData, Time> settingsInfectionData = settings.infectionData();
-        if (!(immediately || settingsInfectionData == null || -settingsInfectionData.b.timeIntervalSinceNow().value > TimeInterval.day.value)) {
+        if (!(immediately || settingsInfectionData == null || oncePerDay(settingsInfectionData.b))) {
             Logger.debug(tag, "Synchronise infection data deferred (timestamp={})", settingsInfectionData.b);
             return;
         }
@@ -337,6 +339,35 @@ public class ConcreteController implements Controller, ReceiverDelegate {
                 delegates.forEach(d -> d.advice(advice, contactStatus));
             });
         });
+    }
+
+    /**
+     * Tests whether daily update should be executed.
+     */
+    protected final static boolean oncePerDay(Time lastUpdate) {
+        return oncePerDay(lastUpdate, new Time());
+    }
+
+    protected final static boolean oncePerDay(Time lastUpdate, Time now) {
+        // Must update if over one day has elapsed
+        if (lastUpdate.timeIntervalSince(now).value > TimeInterval.day.value) {
+            return true;
+        }
+        // Otherwise update overnight only
+        final int windowStart = 0, windowEnd = 6;
+        final Calendar calendar = GregorianCalendar.getInstance();
+        calendar.setTime(now.value);
+        final int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        if (!(hour >= windowStart && hour < windowEnd)) {
+            return false;
+        }
+        // Ensure update wasn't completely recently
+        final TimeInterval window = new TimeInterval((windowEnd - windowStart) * 60 * 60);
+        final TimeInterval elapsed = new TimeInterval(Math.abs(lastUpdate.timeIntervalSince(now).value));
+        if (elapsed.value <= window.value) {
+            return false;
+        }
+        return true;
     }
 
 

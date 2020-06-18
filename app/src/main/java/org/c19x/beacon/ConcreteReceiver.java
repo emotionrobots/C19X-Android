@@ -75,14 +75,6 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         this.bluetoothStateManager = bluetoothStateManager;
         this.transmitter = transmitter;
         this.handler = new Handler(Looper.getMainLooper());
-        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter != null) {
-            bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        }
-        if (bluetoothLeScanner == null) {
-            Logger.warn(tag, "Bluetooth LE scanner unsupported");
-            return;
-        }
         bluetoothStateManager.delegates.add(this);
         bluetoothStateManager(bluetoothStateManager.state());
     }
@@ -138,6 +130,12 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
 
     @Override
     public void start(String source) {
+        if (bluetoothLeScanner == null) {
+            final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (bluetoothAdapter != null) {
+                bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+            }
+        }
         if (bluetoothLeScanner == null) {
             Logger.warn(tag, "Bluetooth LE scanner unsupported");
             return;
@@ -366,24 +364,26 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             }
         };
         final BluetoothGatt gatt = beacon.peripheral.connectGatt(context, false, callback);
+        final String gattDevice = (gatt != null && gatt.getDevice() != null ? gatt.getDevice().toString() : "null");
         try {
-            final BeaconCode transmitterBeaconCode = future.get(20, TimeUnit.SECONDS);
+            final BeaconCode transmitterBeaconCode = future.get(5, TimeUnit.SECONDS);
             if (beacon.isReady()) {
                 Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", beacon.getCode(), beacon.getRssi());
                 delegates.forEach(d -> d.receiver(beacon.getCode(), beacon.getRssi()));
             }
         } catch (TimeoutException e) {
-            Logger.warn(tag, "GATT client timeout", e);
+            Logger.warn(tag, "GATT client timeout (device={})", gattDevice);
         } catch (Throwable e) {
-            Logger.warn(tag, "GATT client exception", e);
+            Logger.warn(tag, "GATT client exception (device={})", gattDevice, e);
         }
         if (gattOpen.compareAndSet(true, false)) {
             try {
                 gatt.disconnect();
             } catch (Throwable e) {
+                Logger.warn(tag, "GATT client disconnect exception (device={})", gattDevice, e);
             }
             gatt.close();
-            Logger.debug(tag, "GATT client closed");
+            Logger.debug(tag, "GATT client closed (device={})", gattDevice);
         }
     }
 

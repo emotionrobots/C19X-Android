@@ -90,7 +90,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
 
         enableStatusSelector();
         controller.delegates.add(this);
-        updateViewData(true, true, true);
+        updateViewData(true, true, true, true);
 
         // TODO : CONSIDER REMOVAL FOR PRODUCTION
         enableImmediateUpdate();
@@ -137,11 +137,11 @@ public class MainActivity extends Activity implements ControllerDelegate {
             Logger.debug(tag, "Status selector value changed (status={})", status);
             showSharedInfectionDataConfirmationDialog(() -> {
                 // Don't allow : Revert to stored value
-                updateViewData(true, false, false);
+                updateViewData(true, false, false, false);
             }, () -> {
                 // Allow : Set status locally and remotely
                 controller.status(status);
-                updateViewData(true, false, false);
+                updateViewData(true, false, false, false);
             });
         });
     }
@@ -160,7 +160,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
         }
     }
 
-    private void updateViewData(boolean status, boolean contacts, boolean advice) {
+    private void updateViewData(boolean status, boolean contacts, boolean advice, boolean suppressNotification) {
         operationQueue.execute(() -> {
             Logger.debug(tag, "updateViewData (status={},contacts={},advice={})", status, contacts, advice);
             if (status) {
@@ -185,7 +185,9 @@ public class MainActivity extends Activity implements ControllerDelegate {
                     contactValueUnit.setText(contactValueUnitText);
                     contactLastUpdate.setText(contactLastUpdateText);
                     contactLastUpdate.setHeight(contactLastUpdateText.isEmpty() ? 0 : contactLastUpdate.getLineHeight());
-                    contactDescription(setTo);
+                    if (contactDescription(setTo) && !suppressNotification) {
+                        AppDelegate.getAppDelegate().notification("Recent Contacts Updated", "Open C19X app to review update.");
+                    }
                 });
             }
             if (advice) {
@@ -196,10 +198,13 @@ public class MainActivity extends Activity implements ControllerDelegate {
                 final Time timestamp = (settingsAdvice.c.value.getTime() > settingsMessage.b.value.getTime() ? settingsAdvice.c : settingsMessage.b);
                 final String adviceLastUpdateText = timestamp.description();
                 runOnUiThread(() -> {
-                    adviceMessage.setText(messageText);
-                    adviceMessage.setVisibility(messageText.isEmpty() ? View.GONE : View.VISIBLE);
+                    if (adviceDescription(setTo) && !suppressNotification) {
+                        AppDelegate.getAppDelegate().notification("Advice Updated", "Open C19X app to review update.");
+                    }
+                    if (adviceMessage(messageText) && !suppressNotification) {
+                        AppDelegate.getAppDelegate().notification("Message Received", "Open C19X app to view message.");
+                    }
                     adviceLastUpdate.setText(adviceLastUpdateText);
-                    adviceDescription(setTo);
                 });
             }
         });
@@ -224,7 +229,8 @@ public class MainActivity extends Activity implements ControllerDelegate {
         }
     }
 
-    private void contactDescription(Status setTo) {
+    private boolean contactDescription(Status setTo) {
+        final String text = text(contactDescription);
         if (setTo == Status.healthy) {
             contactDescription.setText(R.string.contactDescriptionHealthy);
             contactDescriptionStatus.setBackgroundResource(R.color.systemGreen);
@@ -232,9 +238,11 @@ public class MainActivity extends Activity implements ControllerDelegate {
             contactDescription.setText(R.string.contactDescriptionInfectious);
             contactDescriptionStatus.setBackgroundResource(R.color.systemRed);
         }
+        return !text.equals(text(contactDescription));
     }
 
-    private void adviceDescription(Advice setTo) {
+    private boolean adviceDescription(Advice setTo) {
+        final String text = text(adviceDescription);
         switch (setTo) {
             case normal: {
                 adviceDescription.setText(R.string.adviceDescriptionNormal);
@@ -252,6 +260,26 @@ public class MainActivity extends Activity implements ControllerDelegate {
                 break;
             }
         }
+        return !text.equals(text(adviceDescription));
+    }
+
+    private boolean adviceMessage(String message) {
+        final String text = text(adviceMessage);
+        adviceMessage.setText(message);
+        adviceMessage.setVisibility(message.isEmpty() ? View.GONE : View.VISIBLE);
+        return !text.equals(text(adviceMessage));
+    }
+
+    private String text(TextView textView) {
+        final CharSequence charSequence = textView.getText();
+        if (charSequence == null) {
+            return "";
+        }
+        final String text = charSequence.toString();
+        if (text == null) {
+            return "";
+        }
+        return text;
     }
 
     /**
@@ -308,7 +336,7 @@ public class MainActivity extends Activity implements ControllerDelegate {
     @Override
     public void controller(ControllerState didUpdateState) {
         Logger.debug(tag, "controller did update state (state={})", didUpdateState);
-        updateViewData(true, true, true);
+        updateViewData(true, true, true, false);
     }
 
     @Override
@@ -319,7 +347,8 @@ public class MainActivity extends Activity implements ControllerDelegate {
     @Override
     public void transceiver(Transceiver initialised) {
         Logger.debug(tag, "transceiver initialised");
-        updateViewData(false, true, false);
+        updateViewData(false, true, false, false);
+        transceiver(initialised.state());
     }
 
     @Override
@@ -346,25 +375,25 @@ public class MainActivity extends Activity implements ControllerDelegate {
     @Override
     public void transceiver(Time didDetectContactAt) {
         Logger.debug(tag, "transceiver did detect contact (timestamp={})", didDetectContactAt.value);
-        updateViewData(false, true, false);
+        updateViewData(false, true, false, false);
     }
 
     @Override
     public void message(Message didUpdateTo) {
         Logger.debug(tag, "Message did update");
-        updateViewData(false, false, true);
+        updateViewData(false, false, true, false);
     }
 
     @Override
     public void database(Deque<Contact> didUpdateContacts) {
         Logger.debug(tag, "Database did update");
-        updateViewData(false, true, false);
+        updateViewData(false, true, false, false);
     }
 
     @Override
     public void advice(Advice didUpdateTo, Status contactStatus) {
         Logger.debug(tag, "Advice did update");
-        updateViewData(false, true, true);
+        updateViewData(false, true, true, false);
     }
 
     // MARK:- Enable immediate update by double tapping on advice view

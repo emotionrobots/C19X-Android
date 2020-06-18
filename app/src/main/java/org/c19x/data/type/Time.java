@@ -24,6 +24,10 @@ public class Time {
         return new TimeInterval((value.getTime() - new Date().getTime()) / 1000);
     }
 
+    public TimeInterval timeIntervalSince(Time time) {
+        return new TimeInterval((value.getTime() - time.value.getTime()) / 1000);
+    }
+
     public Time advanced(TimeInterval by) {
         return new Time(value.getTime() + by.value * 1000);
     }

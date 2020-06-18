@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import org.c19x.data.Logger;
+import org.c19x.data.primitive.Triple;
 import org.c19x.data.primitive.Tuple;
 import org.c19x.logic.ConcreteController;
 import org.c19x.logic.Controller;
@@ -32,7 +33,8 @@ public class AppDelegate extends Application implements Application.ActivityLife
     private int activityReferences = 0;
     private boolean isActivityChangingConfigurations = false;
     // Notifications
-    private String notificationText = null;
+    private final int notificationChannelId = "C19XNotificationChannel".hashCode();
+    private Triple<String, String, Notification> notificationContent = new Triple<>(null, null, null);
 
     @Override
     public void onCreate() {
@@ -73,11 +75,16 @@ public class AppDelegate extends Application implements Application.ActivityLife
         }
     }
 
+    public Tuple<Integer, Notification> notification() {
+        return new Tuple<>(notificationChannelId, notificationContent.c);
+    }
+
     public Tuple<Integer, Notification> notification(final String title, final String body) {
         Logger.debug(tag, "notification (title={},body={})", title, body);
-        final int notificationChannelId = "C19XNotificationChannel".hashCode();
-        if (body != null) {
-            if (!body.equals(notificationText)) {
+        if (title != null && body != null) {
+            final String existingTitle = notificationContent.a;
+            final String existingBody = notificationContent.b;
+            if (!title.equals(existingTitle) || !body.equals(existingBody)) {
                 createNotificationChannel();
                 final Intent intent = new Intent(getApplicationContext(), AppDelegate.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -92,12 +99,13 @@ public class AppDelegate extends Application implements Application.ActivityLife
                 final Notification notification = builder.build();
                 final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
                 notificationManager.notify(notificationChannelId, notification);
-                notificationText = body;
+                notificationContent = new Triple<>(title, body, notification);
                 return new Tuple<>(notificationChannelId, notification);
             }
         } else {
             final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
             notificationManager.deleteNotificationChannel("C19XNotificationChannel");
+            notificationContent = new Triple<>(null, null, null);
         }
         return new Tuple<>(notificationChannelId, null);
     }

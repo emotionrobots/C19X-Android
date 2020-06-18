@@ -63,14 +63,6 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
         this.beaconCodes = beaconCodes;
         this.updateCodeAfter = updateCodeAfter;
         this.handler = new Handler(Looper.getMainLooper());
-        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter != null && bluetoothAdapter.isMultipleAdvertisementSupported()) {
-            bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
-        }
-        if (bluetoothLeAdvertiser == null) {
-            Logger.warn(tag, "Bluetooth LE advertiser unsupported");
-            return;
-        }
         bluetoothStateManager.delegates.add(this);
         bluetoothStateManager(bluetoothStateManager.state());
         scheduleUpdateBeaconCode(updateCodeAfter);
@@ -86,6 +78,12 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
 
     @Override
     public void start(String source) {
+        if (bluetoothLeAdvertiser == null) {
+            final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (bluetoothAdapter != null && bluetoothAdapter.isMultipleAdvertisementSupported()) {
+                bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
+            }
+        }
         if (bluetoothLeAdvertiser == null) {
             Logger.warn(tag, "Bluetooth LE advertiser unsupported");
             return;
@@ -127,6 +125,12 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
             return;
         }
         Logger.debug(tag, "updateBeaconCode (code={})", beaconCode);
+        if (bluetoothLeAdvertiser == null) {
+            final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (bluetoothAdapter != null && bluetoothAdapter.isMultipleAdvertisementSupported()) {
+                bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
+            }
+        }
         if (bluetoothLeAdvertiser == null) {
             Logger.warn(tag, "Bluetooth LE advertiser unsupported");
             return;

@@ -41,6 +41,13 @@ public class ConcreteTransceiver implements Transceiver, ReceiverDelegate, Bluet
     }
 
     @Override
+    public BluetoothState state() {
+        return bluetoothStateManager.state();
+    }
+
+    // MARK:- ReceiverDelegate
+
+    @Override
     public void receiver(BeaconCode didDetect, RSSI rssi) {
         Logger.debug(tag, "receiver (didDetect={},rssi={})", didDetect, rssi);
         delegates.forEach(d -> d.receiver(didDetect, rssi));

@@ -37,7 +37,10 @@ public class ForegroundService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Logger.debug(tag, "onStartCommand");
-        final Tuple<Integer, Notification> notification = AppDelegate.getAppDelegate().notification("Contact Tracing Enabled", "Turn off Bluetooth to pause.");
+        Tuple<Integer, Notification> notification = AppDelegate.getAppDelegate().notification();
+        if (notification.b == null) {
+            notification = AppDelegate.getAppDelegate().notification("Contact Tracing", "Starting ...");
+        }
         startForeground(notification.a, notification.b);
         super.onStartCommand(intent, flags, startId);
         return START_STICKY;

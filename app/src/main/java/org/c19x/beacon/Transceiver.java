@@ -1,5 +1,7 @@
 package org.c19x.beacon;
 
+import org.c19x.data.type.BluetoothState;
+
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -15,4 +17,11 @@ public interface Transceiver {
      * Stop transmitter and receiver will disable advertising, scanning and terminate all connections.
      */
     void stop(String source);
+
+    /**
+     * Get current Bluetooth state.
+     *
+     * @return
+     */
+    BluetoothState state();
 }
