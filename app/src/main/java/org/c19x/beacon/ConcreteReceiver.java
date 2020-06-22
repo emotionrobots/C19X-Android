@@ -19,7 +19,6 @@ import android.os.ParcelUuid;
 
 import org.c19x.data.Logger;
 import org.c19x.data.type.BeaconCode;
-import org.c19x.data.type.BeaconType;
 import org.c19x.data.type.BluetoothState;
 import org.c19x.data.type.OperatingSystem;
 import org.c19x.data.type.RSSI;
@@ -113,19 +112,19 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             Logger.warn(tag, "Bluetooth is powered off");
             return;
         }
-        try {
-            bluetoothLeScanner.stopScan(scanCallback);
-            scanCallback = null;
-            operationQueue.execute(() -> {
+        operationQueue.execute(() -> {
+            try {
+                bluetoothLeScanner.stopScan(scanCallback);
+                scanCallback = null;
                 final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                 bluetoothAdapter.cancelDiscovery();
                 handleScanResults(context, scanResults, transmitter, beacons);
                 callback.accept(true);
-            });
-        } catch (Throwable e) {
-            Logger.warn(tag, "Stop scan failed", e);
-            callback.accept(false);
-        }
+            } catch (Throwable e) {
+                Logger.warn(tag, "Stop scan failed", e);
+                callback.accept(false);
+            }
+        });
     }
 
     @Override
@@ -260,25 +259,19 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             // Update operating system
             if (scanRecord.getManufacturerSpecificData(manufacturerIdForApple) != null) {
                 // Apple device
-                beacon.setOperatingSystem(OperatingSystem.ios);
                 if (scanRecord.getServiceUuids() == null || scanRecord.getServiceUuids().size() == 0) {
                     // Apple device in background mode
-                    beacon.setBeaconType(BeaconType.iosBackground);
+                    beacon.setOperatingSystem(OperatingSystem.iosBackground);
                 } else if (scanRecord.getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == beaconServiceUUIDPrefix).count() > 0) {
                     // Apple device in foreground mode advertising C19X service
-                    beacon.setBeaconType(BeaconType.iosForeground);
+                    beacon.setOperatingSystem(OperatingSystem.iosForeground);
                 }
             } else if (scanRecord.getServiceUuids().stream().filter(u -> u.getUuid().getMostSignificantBits() == beaconServiceUUIDPrefix).count() > 0) {
                 // Android device advertising C19X service
-                beacon.setBeaconType(BeaconType.android);
                 beacon.setOperatingSystem(OperatingSystem.android);
             } else {
                 // Ignore other devices
-                beacon.setBeaconType(BeaconType.ignore);
-            }
-            // Beacons that require no processing
-            if (beacon.getBeaconType() == BeaconType.ignore) {
-                return;
+                beacon.ignore(true);
             }
             // Add beacon to queue if not processed already
             if (!queue.contains(beacon)) {
@@ -292,7 +285,13 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
     }
 
     private final static void processBeacon(final Context context, final Beacon beacon, final long serviceId, final Transmitter transmitter) {
-        Logger.debug(tag, "Processing beacon (uuid={},type={},code={},rssi={})", beacon.uuid(), beacon.getBeaconType(), beacon.getCode(), beacon.getRssi());
+        Logger.debug(tag, "Processing beacon (uuid={},type={},code={},rssi={})", beacon.uuid(), beacon.getOperatingSystem(), beacon.getCode(), beacon.getRssi());
+
+        // Beacons that require no processing
+        if (beacon.ignore()) {
+            Logger.debug(tag, "Known beacon to be ignored (uuid={},type={},rssi={})", beacon.uuid(), beacon.getOperatingSystem(), beacon.getRssi());
+            return;
+        }
 
         // Beacon has all information
         if (beacon.isReady() && transmitter.isSupported()) {
@@ -325,30 +324,37 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
             @Override
             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
                 Logger.debug(tag, "GATT client discovered services (device={},status={})", gatt.getDevice(), status);
-                for (BluetoothGattService service : gatt.getServices()) {
-                    for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
-                        if (characteristic.getUuid().getMostSignificantBits() == serviceId) {
-                            centralBeaconCode = new BeaconCode(characteristic.getUuid().getLeastSignificantBits());
-                            Logger.debug(tag, "GATT client discovered C19X service (device={},transmitterBeaconCode={})", gatt.getDevice(), centralBeaconCode);
-                            beacon.setCode(centralBeaconCode);
+                final BluetoothGattService service = gatt.getService(Transmitter.beaconServiceUUID);
+                if (service == null) {
+                    Logger.debug(tag, "GATT client C19X service not found (device={})", gatt.getDevice());
+                    beacon.ignore(true);
+                    gatt.close();
+                    future.complete(centralBeaconCode);
+                    return;
+                }
+                for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
+                    if (characteristic.getUuid().getMostSignificantBits() == serviceId) {
+                        centralBeaconCode = new BeaconCode(characteristic.getUuid().getLeastSignificantBits());
+                        Logger.debug(tag, "GATT client discovered C19X service (device={},transmitterBeaconCode={})", gatt.getDevice(), centralBeaconCode);
+                        beacon.setCode(centralBeaconCode);
+                        beacon.ignore(false);
 
-                            if (!transmitter.isSupported()) {
-                                Logger.debug(tag, "GATT client not associated with transmitter, sending data instead");
-                                final BeaconCode beaconCode = transmitter.beaconCode();
-                                final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
-                                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-                                byteBuffer.putLong(0, beaconCode.value);
-                                byteBuffer.putInt(Long.BYTES, beacon.getRssi().value);
-                                characteristic.setValue(byteBuffer.array());
-                                characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-                                final boolean writeInitSuccess = gatt.writeCharacteristic(characteristic);
-                                Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, beacon.getRssi().value, writeInitSuccess);
-                                // GATT close on write complete
-                                return;
-                            } else {
-                                gatt.disconnect();
-                                future.complete(centralBeaconCode);
-                            }
+                        if (!transmitter.isSupported()) {
+                            Logger.debug(tag, "GATT client not associated with transmitter, sending data instead");
+                            final BeaconCode beaconCode = transmitter.beaconCode();
+                            final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
+                            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                            byteBuffer.putLong(0, beaconCode.value);
+                            byteBuffer.putInt(Long.BYTES, beacon.getRssi().value);
+                            characteristic.setValue(byteBuffer.array());
+                            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+                            final boolean writeInitSuccess = gatt.writeCharacteristic(characteristic);
+                            Logger.debug(tag, "GATT client initiated write (device={},receiverBeaconCode={},rssi={},success={})", gatt.getDevice(), beaconCode, beacon.getRssi().value, writeInitSuccess);
+                            // GATT close on write complete
+                            return;
+                        } else {
+                            gatt.disconnect();
+                            future.complete(centralBeaconCode);
                         }
                     }
                 }

@@ -4,7 +4,6 @@ package org.c19x.beacon;
 import android.bluetooth.BluetoothDevice;
 
 import org.c19x.data.type.BeaconCode;
-import org.c19x.data.type.BeaconType;
 import org.c19x.data.type.OperatingSystem;
 import org.c19x.data.type.RSSI;
 import org.c19x.data.type.Time;
@@ -16,9 +15,10 @@ public class Beacon {
     /// Peripheral underpinning the beacon.
     public final BluetoothDevice peripheral;
     private OperatingSystem operatingSystem;
-    private BeaconType beaconType;
     private RSSI rssi;
     private BeaconCode code;
+    private boolean ignore = false;
+
     /**
      * Last update timestamp for beacon code. Need to track this to invalidate codes from
      * yesterday. It is unnecessary to invalidate old codes obtained during a day as the fact
@@ -49,15 +49,6 @@ public class Beacon {
         this.operatingSystem = operatingSystem;
     }
 
-    public BeaconType getBeaconType() {
-        return beaconType;
-    }
-
-    public void setBeaconType(BeaconType beaconType) {
-        lastUpdatedAt = new Time();
-        this.beaconType = beaconType;
-    }
-
     public RSSI getRssi() {
         return rssi;
     }
@@ -75,6 +66,15 @@ public class Beacon {
         lastUpdatedAt = new Time();
         codeUpdatedAt = new Time();
         this.code = code;
+    }
+
+    public boolean ignore() {
+        return ignore && lastUpdatedAt.timeIntervalSinceNow().value < 10 * TimeInterval.minute.value;
+    }
+
+    public void ignore(boolean setTo) {
+        lastUpdatedAt = new Time();
+        this.ignore = setTo;
     }
 
     public String uuid() {
@@ -95,7 +95,7 @@ public class Beacon {
     }
 
     public boolean isExpired() {
-        return lastUpdatedAt.timeIntervalSinceNow().value > (3 * TimeInterval.minute.value);
+        return lastUpdatedAt.timeIntervalSinceNow().value > TimeInterval.day.value;
     }
 
     @Override

@@ -57,6 +57,7 @@ public class ConcreteController implements Controller, ReceiverDelegate {
 
         // TEST ONLY - REMOVE FOR PRODUCTION
         //reset();
+//        database.remove(new Time().advanced(TimeInterval.day), contacts -> {});
     }
 
     public Settings settings() {

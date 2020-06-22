@@ -28,6 +28,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
@@ -45,6 +47,7 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
 
     private final Context context;
     private final Handler handler;
+    private final ExecutorService operationQueue = Executors.newSingleThreadExecutor();
     private BluetoothStateManager bluetoothStateManager;
     private BluetoothLeAdvertiser bluetoothLeAdvertiser;
     private BluetoothGattServer bluetoothGattServer;
@@ -108,12 +111,16 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
             Logger.warn(tag, "Already stopped");
             return;
         }
-        bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
-        advertiseCallback = null;
+        operationQueue.execute(() -> {
+            bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
+            advertiseCallback = null;
+        });
         if (bluetoothGattServer != null) {
-            bluetoothGattServer.clearServices();
-            bluetoothGattServer.close();
-            bluetoothGattServer = null;
+            operationQueue.execute(() -> {
+                bluetoothGattServer.clearServices();
+                bluetoothGattServer.close();
+                bluetoothGattServer = null;
+            });
         }
     }
 
@@ -140,22 +147,28 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
             return;
         }
         if (advertiseCallback != null) {
-            bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
-            advertiseCallback = null;
+            operationQueue.execute(() -> {
+                bluetoothLeAdvertiser.stopAdvertising(advertiseCallback);
+                advertiseCallback = null;
+            });
         }
         if (bluetoothGattServer != null) {
-            bluetoothGattServer.clearServices();
-            bluetoothGattServer.close();
-            bluetoothGattServer = null;
+            operationQueue.execute(() -> {
+                bluetoothGattServer.clearServices();
+                bluetoothGattServer.close();
+                bluetoothGattServer = null;
+            });
         }
         if (!enabled) {
             return;
         }
-        final long beaconServiceUUIDPrefix = beaconServiceUUID.getMostSignificantBits();
-        bluetoothGattServer = startGattServer(context, beaconServiceUUIDPrefix);
-        setGattService(context, bluetoothGattServer, beaconServiceUUIDPrefix, beaconCode);
-        advertiseCallback = startAdvertising(bluetoothLeAdvertiser, beaconServiceUUIDPrefix);
-        Logger.debug(tag, "transmitting (code={})", beaconCode);
+        operationQueue.execute(() -> {
+            final long beaconServiceUUIDPrefix = beaconServiceUUID.getMostSignificantBits();
+            bluetoothGattServer = startGattServer(context, beaconServiceUUIDPrefix);
+            setGattService(context, bluetoothGattServer, beaconServiceUUIDPrefix, beaconCode);
+            advertiseCallback = startAdvertising(bluetoothLeAdvertiser, beaconServiceUUIDPrefix);
+            Logger.debug(tag, "transmitting (code={})", beaconCode);
+        });
     }
 
     @Override
