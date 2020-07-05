@@ -165,7 +165,7 @@ public class ConcreteTransmitter implements Transmitter, BluetoothStateManagerDe
         operationQueue.execute(() -> {
             final long beaconServiceUUIDPrefix = beaconServiceUUID.getMostSignificantBits();
             bluetoothGattServer = startGattServer(context, beaconServiceUUIDPrefix);
-            setGattService(context, bluetoothGattServer, beaconServiceUUIDPrefix, beaconCode);
+            setGattService(context, bluetoothGattServer, beaconServiceUUIDPrefix, new BeaconCode(2));
             advertiseCallback = startAdvertising(bluetoothLeAdvertiser, beaconServiceUUIDPrefix);
             Logger.debug(tag, "transmitting (code={})", beaconCode);
         });
