@@ -14,29 +14,25 @@ public class ConcreteTransceiver implements Transceiver, ReceiverDelegate, Bluet
     private final DayCodes dayCodes;
     private final BeaconCodes beaconCodes;
     private final BluetoothStateManager bluetoothStateManager;
-    private final Transmitter transmitter;
+    private final Transmitter transmitter = null;
     private final Receiver receiver;
 
     public ConcreteTransceiver(Context context, SharedSecret sharedSecret, TimeInterval codeUpdateAfter) {
         dayCodes = new ConcreteDayCodes(sharedSecret);
         beaconCodes = new ConcreteBeaconCodes(dayCodes);
         bluetoothStateManager = new ConcreteBluetoothStateManager(context);
-        transmitter = new ConcreteTransmitter(context, bluetoothStateManager, beaconCodes, codeUpdateAfter);
         receiver = new ConcreteReceiver(context, bluetoothStateManager, transmitter);
         bluetoothStateManager.delegates.add(this);
-        transmitter.delegates.add(this);
         receiver.delegates.add(this);
     }
 
     @Override
     public void start(String source) {
-        transmitter.start(source);
         receiver.start(source);
     }
 
     @Override
     public void stop(String source) {
-        transmitter.stop(source);
         receiver.stop(source);
     }
 

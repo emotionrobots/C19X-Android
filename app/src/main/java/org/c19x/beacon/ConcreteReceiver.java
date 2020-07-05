@@ -294,7 +294,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
         }
 
         // Beacon has all information
-        if (beacon.isReady() && transmitter.isSupported()) {
+        if (beacon.isReady() && transmitter != null && transmitter.isSupported()) {
             Logger.debug(tag, "Detected beacon (beaconCode={},rssi={})", beacon.getCode(), beacon.getRssi());
             delegates.forEach(d -> d.receiver(beacon.getCode(), beacon.getRssi()));
             return;
@@ -327,7 +327,9 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                 final BluetoothGattService service = gatt.getService(Transmitter.beaconServiceUUID);
                 if (service == null) {
                     Logger.debug(tag, "GATT client C19X service not found (device={})", gatt.getDevice());
-                    beacon.ignore(true);
+                    gatt.getServices().forEach(gattService -> {
+                        Logger.debug(tag, "GATT client service discovered (device={},service={})", gatt.getDevice(), gattService.getUuid());
+                    });
                     gatt.close();
                     future.complete(centralBeaconCode);
                     return;
@@ -339,7 +341,7 @@ public class ConcreteReceiver implements Receiver, BluetoothStateManagerDelegate
                         beacon.setCode(centralBeaconCode);
                         beacon.ignore(false);
 
-                        if (!transmitter.isSupported()) {
+                        if (transmitter != null && !transmitter.isSupported()) {
                             Logger.debug(tag, "GATT client not associated with transmitter, sending data instead");
                             final BeaconCode beaconCode = transmitter.beaconCode();
                             final ByteBuffer byteBuffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
